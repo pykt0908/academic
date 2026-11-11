@@ -472,7 +472,15 @@ export default function App() {
       styleEl.id = 'print-orientation-style'
       document.head.appendChild(styleEl)
     }
-    styleEl.innerHTML = '@page { size: A4 landscape; margin: 5mm 6mm; }'
+    styleEl.innerHTML = `
+      @page { size: A4 landscape; margin: 5mm 6mm; }
+      @media print {
+        *, table, th, td, tr, .print-table, .print-table th, .print-table tr, .print-table td {
+          background-color: #ffffff !important;
+          background: #ffffff !important;
+        }
+      }
+    `
 
     setPrintMode('attendance')
     setTimeout(() => {
@@ -1528,47 +1536,47 @@ export default function App() {
                   <table className="print-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '10pt', fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif" }}>
                     <thead>
                       {/* Row 1: Months */}
-                      <tr style={{ backgroundColor: '#f1f5f9' }}>
-                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '36px', fontSize: '10pt' }}>เลขที่</th>
-                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '80px', fontSize: '10pt' }}>เลขประจำตัว</th>
-                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 5px', textAlign: 'center', width: '160px', fontSize: '10pt' }}>ชื่อ - สกุล</th>
+                      <tr style={{ backgroundColor: '#ffffff' }}>
+                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '36px', fontSize: '10pt', backgroundColor: '#ffffff' }}>เลขที่</th>
+                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '80px', fontSize: '10pt', backgroundColor: '#ffffff' }}>เลขประจำตัว</th>
+                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 5px', textAlign: 'center', width: '160px', fontSize: '10pt', backgroundColor: '#ffffff' }}>ชื่อ - สกุล</th>
                         {page.monthGroups.map(m => (
-                          <th key={m.monthKey} colSpan={m.colspan} style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '10pt' }}>{m.monthName}</th>
+                          <th key={m.monthKey} colSpan={m.colspan} style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '10pt', backgroundColor: '#ffffff' }}>{m.monthName}</th>
                         ))}
                         {page.isLastCol && (
-                          <th colSpan={4} rowSpan={3} style={{ border: '1px solid #000', padding: '3px 2px', width: '115px', fontSize: '10pt' }}>สรุป</th>
+                          <th colSpan={4} rowSpan={3} style={{ border: '1px solid #000', padding: '3px 2px', width: '115px', fontSize: '10pt', backgroundColor: '#ffffff' }}>สรุป</th>
                         )}
                       </tr>
-                      <tr style={{ backgroundColor: '#f8fafc' }}>
+                      <tr style={{ backgroundColor: '#ffffff' }}>
                         {page.monthGroups.map(m => (
                           m.weekGroups.map(w => (
-                            <th key={`${m.monthKey}-${w.weekNo}`} colSpan={w.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9.5pt' }}>ส.{w.weekNo}</th>
+                            <th key={`${m.monthKey}-${w.weekNo}`} colSpan={w.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>ส.{w.weekNo}</th>
                           ))
                         ))}
                       </tr>
-                      <tr style={{ backgroundColor: '#f1f5f9' }}>
+                      <tr style={{ backgroundColor: '#ffffff' }}>
                         {page.monthGroups.map(m => (
                           m.weekGroups.map(w => (
                             w.dateGroups ? (
                               w.dateGroups.map(d => (
-                                <th key={d.dateStr} colSpan={d.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9.5pt' }}>{d.dateNum}</th>
+                                <th key={d.dateStr} colSpan={d.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>{d.dateNum}</th>
                               ))
                             ) : (
-                              <th key={w.weekNo} colSpan={w.colspan} style={{ border: '1px solid #000' }} />
+                              <th key={w.weekNo} colSpan={w.colspan} style={{ border: '1px solid #000', backgroundColor: '#ffffff' }} />
                             )
                           ))
                         ))}
                       </tr>
-                      <tr style={{ backgroundColor: '#f8fafc', fontWeight: 'bold' }}>
+                      <tr style={{ backgroundColor: '#ffffff', fontWeight: 'bold' }}>
                         {page.columns.map((c, i) => (
-                          <th key={i} style={{ border: '1px solid #000', padding: '2px 1px', minWidth: '20px', fontSize: '9.5pt' }}>{c.periodSeq || (page.colStart + i + 1)}</th>
+                          <th key={i} style={{ border: '1px solid #000', padding: '2px 1px', minWidth: '20px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>{c.periodSeq || (page.colStart + i + 1)}</th>
                         ))}
                         {page.isLastCol && (
                           <>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt' }}>มา</th>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt' }}>ขาด</th>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt' }}>ลา</th>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '34px', fontSize: '9.5pt' }}>%</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>มา</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>ขาด</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>ลา</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '34px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>%</th>
                           </>
                         )}
                       </tr>

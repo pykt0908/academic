@@ -252,7 +252,8 @@ tr:hover .tb-sticky-3 {
 
   th,
   table.print-table th {
-    background-color: #f8fafc !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
     color: black !important;
     font-weight: bold !important;
     font-size: 10pt !important;
