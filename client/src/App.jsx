@@ -531,56 +531,83 @@ export default function App() {
     }
   }
 
-  // Render Ruled Notes (Natural flow, fills 100% of the line width, with seamless dotted ruled lines)
+  // Helper to split text into lines respecting Thai word boundaries and full line width
+  const wrapThaiText = (txt, maxLen = 110) => {
+    if (!txt) return []
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter('th', { granularity: 'word' })
+      const words = Array.from(segmenter.segment(txt)).map(s => s.segment)
+      const lines = []
+      let cur = ''
+      for (const word of words) {
+        if ((cur + word).length > maxLen) {
+          if (cur) lines.push(cur)
+          cur = word
+        } else {
+          cur += word
+        }
+      }
+      if (cur) lines.push(cur)
+      return lines
+    }
+    const lines = []
+    for (let i = 0; i < txt.length; i += maxLen) {
+      lines.push(txt.slice(i, i + maxLen))
+    }
+    return lines
+  }
+
+  // Render Ruled Notes (Using exact same 1px dotted #444 border as the header fields on EVERY line)
   const renderRuledNotes = (content, minLines = 2) => {
     const text = (content && content !== '-') ? content.trim() : ''
-    const minHeight = `${minLines * 28}px`
-
-    // Highlight "คาบที่ X:" in bold
-    const formatBoldPeriods = (str) => {
-      if (!str) return ''
-      const lines = str.split('\n')
-      return lines.map((line, lIdx) => {
-        const match = line.match(/^(คาบที่\s*\d+\s*:?)(.*)$/)
-        if (match) {
-          return (
-            <React.Fragment key={lIdx}>
-              <strong style={{ fontWeight: 700, color: '#000' }}>{match[1]}</strong>
-              {match[2]}
-              {lIdx < lines.length - 1 ? '\n' : ''}
-            </React.Fragment>
-          )
+    let displayLines = []
+    if (text) {
+      const paragraphs = text.split('\n')
+      for (const para of paragraphs) {
+        if (!para.trim()) {
+          displayLines.push('')
+        } else {
+          const wrapped = wrapThaiText(para, 110)
+          displayLines.push(...wrapped)
         }
-        return (
-          <React.Fragment key={lIdx}>
-            {line}
-            {lIdx < lines.length - 1 ? '\n' : ''}
-          </React.Fragment>
-        )
-      })
+      }
     }
 
+    // Guarantee at least minLines are rendered
+    const totalLines = Math.max(displayLines.length, minLines)
+    const linesToRender = Array.from({ length: totalLines }).map((_, i) => displayLines[i] || '')
+
     return (
-      <div
-        style={{
-          width: '100%',
-          minHeight,
-          lineHeight: '28px',
-          fontSize: '10pt',
-          paddingLeft: '16px',
-          marginBottom: '10px',
-          boxSizing: 'border-box',
-          backgroundColor: '#ffffff',
-          backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='28'%3E%3Crect width='4' height='28' fill='white'/%3E%3Crect x='0' y='27' width='2' height='1' fill='%23444444'/%3E%3C/svg%3E\")",
-          backgroundRepeat: 'repeat',
-          backgroundPosition: '0 0',
-          wordBreak: 'break-word',
-          whiteSpace: 'pre-wrap',
-          WebkitPrintColorAdjust: 'exact',
-          printColorAdjust: 'exact'
-        }}
-      >
-        {formatBoldPeriods(text)}
+      <div style={{ width: '100%', paddingLeft: '16px', marginBottom: '8px' }}>
+        {linesToRender.map((line, idx) => {
+          const match = line.match(/^(คาบที่\s*\d+\s*:?)(.*)$/)
+          return (
+            <div
+              key={idx}
+              style={{
+                width: '100%',
+                borderBottom: '1px dotted #444',
+                minHeight: '26px',
+                lineHeight: 1.8,
+                fontSize: '10pt',
+                paddingBottom: '2px',
+                marginBottom: '3px',
+                boxSizing: 'border-box'
+              }}
+            >
+              {match ? (
+                <>
+                  <strong style={{ fontWeight: 700, color: '#000' }}>{match[1]}</strong>
+                  <span>{match[2]}</span>
+                </>
+              ) : line ? (
+                <span>{line}</span>
+              ) : (
+                <span>&nbsp;</span>
+              )}
+            </div>
+          )
+        })}
       </div>
     )
   }
