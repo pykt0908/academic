@@ -718,66 +718,49 @@ export default function App() {
           sx={{ borderBottom: '1px solid #cbd5e1', bgcolor: '#ffffff' }}
           className="no-print"
         >
-          <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, sm: 3 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box
-                component="img"
-                src="/img/logo.png"
-                alt="โลโก้"
-                sx={{ width: 38, height: 38, objectFit: 'contain' }}
-              />
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                    วิทยาลัยเทคโนโลยีศรีราชา
+          <Container maxWidth="xl">
+            <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box
+                  component="img"
+                  src="/img/logo.png"
+                  alt="โลโก้"
+                  sx={{ width: 38, height: 38, objectFit: 'contain' }}
+                />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                  วิทยาลัยเทคโนโลยีศรีราชา
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
+                    {teacher?.TeacherName || teacher?.TeacherNo}
                   </Typography>
-                  <Chip
-                    label="ระบบบันทึกเวลาเรียน"
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      borderRadius: 0,
-                      fontWeight: 600,
-                      fontSize: '0.7rem',
-                      height: 20,
-                      borderColor: '#cbd5e1'
-                    }}
-                  />
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>
+                    {teacher?.DepartNameFull || teacher?.TeacherNo}
+                  </Typography>
                 </Box>
-                <Typography variant="caption" sx={{ color: '#64748b' }}>
-                  สมุดบันทึกเวลาเรียนและการเข้าสอน
-                </Typography>
-              </Box>
-            </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                  {teacher?.TeacherName || teacher?.TeacherNo}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#64748b' }}>
-                  {teacher?.DepartNameFull || teacher?.TeacherNo}
-                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleLogout}
+                  startIcon={<LogoutIcon fontSize="small" />}
+                  sx={{
+                    borderRadius: 0,
+                    borderColor: '#cbd5e1',
+                    color: '#475569',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    '&:hover': { color: '#dc2626', borderColor: '#dc2626' }
+                  }}
+                >
+                  ออกจากระบบ
+                </Button>
               </Box>
-
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleLogout}
-                startIcon={<LogoutIcon fontSize="small" />}
-                sx={{
-                  borderRadius: 0,
-                  borderColor: '#cbd5e1',
-                  color: '#475569',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  '&:hover': { color: '#dc2626', borderColor: '#dc2626' }
-                }}
-              >
-                ออกจากระบบ
-              </Button>
-            </Box>
-          </Toolbar>
+            </Toolbar>
+          </Container>
         </AppBar>
 
         {/* Main Body */}
