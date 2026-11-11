@@ -1,0 +1,300 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Sarabun', 'TH Sarabun New', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sarabun: 'Sarabun', 'TH Sarabun New', sans-serif;
+}
+
+:root {
+  --col-w-1: 48px;
+  --col-w-2: 120px;
+  --col-w-3: 230px;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+body {
+  font-family: 'Sarabun', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ========================================================
+   TABLE STYLING (STICKY ONLY LEFT COLUMNS: เลขที่, เลขประจำตัว, ชื่อ-สกุล)
+   ======================================================== */
+.matrix-table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  width: 100% !important;
+  background-color: #ffffff !important;
+}
+
+/* All Header Cells: Clean white background, no colors */
+.matrix-table thead th {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-sizing: border-box !important;
+}
+
+/* Sticky Left Header Corner Cells: Spans Row 1-4 natively */
+.th-corner-1 {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 25 !important;
+  width: var(--col-w-1) !important;
+  min-width: var(--col-w-1) !important;
+  max-width: var(--col-w-1) !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-right: 1px solid #cbd5e1 !important;
+  border-bottom: 2px solid #64748b !important;
+}
+
+.th-corner-2 {
+  position: sticky !important;
+  left: var(--col-w-1) !important;
+  z-index: 25 !important;
+  width: var(--col-w-2) !important;
+  min-width: var(--col-w-2) !important;
+  max-width: var(--col-w-2) !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-right: 1px solid #cbd5e1 !important;
+  border-bottom: 2px solid #64748b !important;
+}
+
+.th-corner-3 {
+  position: sticky !important;
+  left: calc(var(--col-w-1) + var(--col-w-2)) !important;
+  z-index: 25 !important;
+  width: var(--col-w-3) !important;
+  min-width: var(--col-w-3) !important;
+  max-width: var(--col-w-3) !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-right: 2px solid #64748b !important;
+  border-bottom: 2px solid #64748b !important;
+  box-shadow: 3px 0 6px -2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Sticky Left Body Cells */
+.tb-sticky-1 {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 15 !important;
+  background-color: #ffffff !important;
+  width: var(--col-w-1) !important;
+  min-width: var(--col-w-1) !important;
+  max-width: var(--col-w-1) !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+.tb-sticky-2 {
+  position: sticky !important;
+  left: var(--col-w-1) !important;
+  z-index: 15 !important;
+  background-color: #ffffff !important;
+  width: var(--col-w-2) !important;
+  min-width: var(--col-w-2) !important;
+  max-width: var(--col-w-2) !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+.tb-sticky-3 {
+  position: sticky !important;
+  left: calc(var(--col-w-1) + var(--col-w-2)) !important;
+  z-index: 15 !important;
+  background-color: #ffffff !important;
+  width: var(--col-w-3) !important;
+  min-width: var(--col-w-3) !important;
+  max-width: var(--col-w-3) !important;
+  border-right: 2px solid #64748b !important;
+  box-shadow: 3px 0 6px -2px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Row hover consistency on sticky cells */
+tr:hover .tb-sticky-1,
+tr:hover .tb-sticky-2,
+tr:hover .tb-sticky-3 {
+  background-color: #f8fafc !important;
+}
+
+/* Summary Header */
+.th-summary-header {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-left: 2px solid #64748b !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  border-right: 1px solid #cbd5e1 !important;
+}
+
+/* ========================================================
+   PRINT SPECIFIC RULES (Sarabun font strictly)
+   ======================================================== */
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 5mm 6mm;
+  }
+
+  * {
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
+    background: white !important;
+    color: black !important;
+    font-size: 10pt !important;
+  }
+
+  .no-print,
+  .MuiDialog-root,
+  .MuiBackdrop-root,
+  .MuiModal-root {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-only,
+  .print-only * {
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
+  }
+
+  .print-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    margin-bottom: 0 !important;
+    display: block !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+    margin-bottom: 0 !important;
+  }
+
+  .tb-sticky-1,
+  .tb-sticky-2,
+  .tb-sticky-3,
+  .th-corner-1,
+  .th-corner-2,
+  .th-corner-3,
+  .th-summary-header {
+    position: static !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    color: inherit !important;
+  }
+
+  table,
+  table.print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
+    page-break-inside: auto;
+  }
+
+  table.print-table thead {
+    display: table-header-group !important;
+  }
+
+  table.print-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  th,
+  td,
+  table.print-table th,
+  table.print-table td {
+    border: 1px solid #000000 !important;
+    padding: 3px 2px !important;
+    font-size: 10pt !important;
+    line-height: 1.25 !important;
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
+  }
+
+  th,
+  table.print-table th {
+    background-color: #f8fafc !important;
+    color: black !important;
+    font-weight: bold !important;
+    font-size: 10pt !important;
+  }
+
+  .signature-section {
+    display: flex !important;
+    justify-content: space-around !important;
+    text-align: center !important;
+    margin-top: 14px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+  }
+
+  .signature-section,
+  .signature-section * {
+    font-size: 10pt !important;
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
+  }
+
+  .signature-section p {
+    margin: 3px 0 !important;
+  }
+}
+
+
+/* ========================================================
+   RULED DOTTED NOTES (Full-width dotted lines on every line)
+   ======================================================== */
+.ruled-dotted-notes {
+  width: 100%;
+  min-height: 56px;
+  line-height: 28px;
+  font-size: 11pt;
+  padding: 0 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-image: radial-gradient(circle, #444 0.9px, transparent 0.9px);
+  background-size: 6px 28px;
+  background-position: 0 25px;
+  background-repeat: repeat;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}

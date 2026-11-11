@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบสมุดบันทึกเวลาเรียนและการเข้าสอน - วิทยาลัยเทคโนโลยีศรีราชา</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                        sarabun: ['Sarabun', 'sans-serif']
+                    },
+                    colors: {
+                        navy: {
+                            50: '#f0f5ff',
+                            100: '#e0ecff',
+                            200: '#c7dcfe',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                            950: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased font-sans">
+
+    <!-- ==========================================
+         LOGIN VIEW (Minimal Blue Design)
+    ========================================== -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center p-4 sm:p-6 no-print">
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- Header -->
+            <div class="p-8 text-center bg-white border-b border-slate-100">
+                <div class="flex justify-center mb-4">
+                    <img src="img/logo.png" alt="โลโก้วิทยาลัยเทคโนโลยีศรีราชา"
+                        class="w-24 h-24 object-contain rounded-full p-1 border-2 border-blue-100 shadow-sm">
+                </div>
+                <h1 class="text-2xl font-bold text-navy-900 tracking-tight">วิทยาลัยเทคโนโลยีศรีราชา</h1>
+                <p class="text-sm font-medium text-slate-500 mt-1">สมุดบันทึกเวลาเรียนและการเข้าสอน</p>
+                <div class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-navy-700 border border-blue-100">
+                    <i class="fa-solid fa-lock text-[10px]"></i> โหมดรายงานสำหรับครูผู้สอน (Read-Only)
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="p-8 space-y-5">
+                <div id="loginError" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-sm font-medium"></div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                        ชื่อผู้ใช้งาน (Username / รหัสครู)
+                    </label>
+                    <input type="text" id="loginUsername" required placeholder="เช่น T67003"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-navy-600 text-base font-medium transition bg-slate-50/50">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                        รหัสผ่าน (Password)
+                    </label>
+                    <input type="password" id="loginPassword" required placeholder="รหัสผ่านเข้าใช้งาน MisSchool"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-navy-600 text-base font-medium transition bg-slate-50/50">
+                </div>
+
+                <button type="submit" id="btnLogin"
+                    class="w-full bg-navy-900 hover:bg-navy-800 text-white font-semibold py-3.5 rounded-xl transition duration-150 shadow-sm text-base flex items-center justify-center gap-2">
+                    <span>เข้าสู่ระบบ</span>
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ==========================================
+         MAIN DASHBOARD (Minimalist Blue Theme)
+    ========================================== -->
+    <div id="dashboardSection" class="hidden min-h-screen flex flex-col no-print">
+        <!-- Minimal Navbar -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+            <div class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <img src="img/logo.png" alt="โลโก้วิทยาลัยเทคโนโลยีศรีราชา"
+                        class="w-12 h-12 object-contain rounded-full border border-blue-100 p-0.5">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg sm:text-xl font-bold text-navy-900 leading-snug">วิทยาลัยเทคโนโลยีศรีราชา</h1>
+                            <span class="text-[11px] font-bold bg-blue-50 text-navy-700 px-2 py-0.5 rounded-md border border-blue-200">
+                                READ-ONLY
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 font-medium">สมุดบันทึกเวลาเรียนและการเข้าสอน (ครูผู้สอน)</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="text-right hidden sm:block">
+                        <div id="navTeacherName" class="text-sm sm:text-base font-semibold text-slate-800">กำลังโหลด...</div>
+                        <div id="navTeacherDept" class="text-xs text-slate-500">แผนกวิชา</div>
+                    </div>
+                    <button id="btnLogout" title="ออกจากระบบ"
+                        class="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition border border-slate-200 font-medium text-xs sm:text-sm">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span class="hidden md:inline">ออกจากระบบ</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Body -->
+        <main class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 space-y-5">
+
+            <!-- ==============================================
+                 STEP-BY-STEP FILTER SELECTORS (MINIMAL BLUE)
+            =============================================== -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm">
+                <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                    <div class="flex items-center gap-2 text-navy-900 font-bold text-base sm:text-lg">
+                        <i class="fa-solid fa-sliders text-navy-700"></i>
+                        <span>เงื่อนไขการเรียกดูสมุดบันทึกเวลาเรียน</span>
+                    </div>
+                    <span class="text-xs text-slate-500 font-medium bg-slate-100 px-2.5 py-1 rounded-md">
+                        เฉพาะวิชาที่คุณได้รับมอบหมาย
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+                    <!-- Step 1: Term / Year -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-navy-900 text-white text-[11px] mr-1.5 font-bold">1</span>
+                            ภาคเรียน / ปีการศึกษา
+                        </label>
+                        <select id="selTermYear"
+                            class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-3 text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-navy-600 transition cursor-pointer">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <!-- Step 2: Subject -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-navy-900 text-white text-[11px] mr-1.5 font-bold">2</span>
+                            รายวิชาที่สอน
+                        </label>
+                        <select id="selSubject"
+                            class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-3 text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-navy-600 transition cursor-pointer">
+                            <option value="">-- โปรดเลือกรายวิชา --</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 3: Classroom -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-navy-900 text-white text-[11px] mr-1.5 font-bold">3</span>
+                            ห้องเรียน
+                        </label>
+                        <select id="selClass"
+                            class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-3 text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-navy-600 transition cursor-pointer">
+                            <option value="">-- โปรดเลือกห้องเรียน --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-navy-600"></i>
+                        <span>เมื่อเลือกห้องเรียนแล้ว ข้อมูลจะโหลดขึ้นตารางทันทีอัตโนมัติ</span>
+                    </span>
+                    <span id="loadingStatus" class="hidden text-navy-700 font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดตาราง...
+                    </span>
+                </div>
+            </div>
+
+
+            <!-- ==============================================
+                 SUMMARY STATS & EXPORT ACTIONS
+            =============================================== -->
+            <div id="statsSection" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-navy-800 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 font-semibold uppercase">จำนวนนักเรียน</div>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span id="statStudents" class="text-2xl font-bold text-navy-950">0</span>
+                            <span class="text-xs text-slate-500">คน</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-navy-800 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-calendar-day"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 font-semibold uppercase">จำนวนคาบสอนทั้งหมด</div>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span id="statSessions" class="text-2xl font-bold text-navy-950">0</span>
+                            <span class="text-xs text-slate-500">คาบ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-navy-800 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 font-semibold uppercase">สัญลักษณ์</div>
+                        <div class="text-xs font-semibold text-slate-700 mt-1 flex gap-1.5 flex-wrap">
+                            <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">/ = มา</span>
+                            <span class="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">ข = ขาด</span>
+                            <span class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">ล = ลา</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-end gap-2.5">
+                    <button id="btnPrint"
+                        class="px-4 py-2.5 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-xl transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-print"></i>
+                        <span>พิมพ์ A4 (Sarabun)</span>
+                    </button>
+                    <button id="btnExportExcel"
+                        class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold rounded-xl transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Excel</span>
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- ==============================================
+                 ATTENDANCE SHEET MATRIX TABLE (MINIMAL)
+            =============================================== -->
+            <div id="tableContainer" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <!-- Info Header -->
+                <div class="p-5 bg-white border-b border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <h2 id="sheetTitle" class="text-lg sm:text-xl font-bold text-navy-950">
+                            ตารางบันทึกเวลาเรียนและการเช็คชื่อ
+                        </h2>
+                        <p id="sheetSubtitle" class="text-sm font-medium text-slate-500 mt-0.5">
+                            กรุณาเลือกภาคเรียน รายวิชา และห้องเรียนด้านบน
+                        </p>
+                    </div>
+
+                    <div id="legendPills" class="hidden flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                        <span class="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-md border border-emerald-200">/ หรือ ม : มาเรียน</span>
+                        <span class="bg-rose-50 text-rose-800 px-2.5 py-1 rounded-md border border-rose-200">ข : ขาดเรียน</span>
+                        <span class="bg-amber-50 text-amber-800 px-2.5 py-1 rounded-md border border-amber-200">ล : ลากิจ</span>
+                        <span class="bg-yellow-50 text-yellow-800 px-2.5 py-1 rounded-md border border-yellow-200">ป : ลาป่วย</span>
+                    </div>
+                </div>
+
+                <!-- Matrix Table with Sticky Columns -->
+                <div class="overflow-x-auto max-h-[72vh]">
+                    <table id="matrixTable" class="w-full text-center border-collapse text-sm">
+                        <thead id="matrixThead" class="font-semibold border-b border-slate-200 text-slate-700">
+                            <!-- Injected dynamically -->
+                        </thead>
+                        <tbody id="matrixTbody" class="divide-y divide-slate-100 bg-white">
+                            <tr>
+                                <td colspan="10" class="py-16 text-center text-slate-400 text-base">
+                                    <i class="fa-solid fa-arrow-up text-2xl mb-2 text-navy-600 block animate-bounce"></i>
+                                    กรุณาเลือก <strong>ภาคเรียน &gt; รายวิชา &gt; ห้องเรียน</strong> เพื่อเปิดสมุดบันทึกเวลาเรียน
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+    <!-- ==========================================
+         OFFICIAL A4 PRINT TEMPLATE (SARABUN FONT ONLY)
+    ========================================== -->
+    <div id="printContainer" class="print-only print-container p-2 font-sarabun">
+        <!-- Print Header with Logo -->
+        <div class="flex items-center justify-between pb-3 border-b-2 border-slate-800 mb-3 font-sarabun">
+            <div class="flex items-center gap-3.5">
+                <img src="img/logo.png" alt="โลโก้วิทยาลัยเทคโนโลยีศรีราชา" class="w-16 h-16 object-contain">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 leading-tight">วิทยาลัยเทคโนโลยีศรีราชา</h2>
+                    <h3 class="text-base font-semibold text-slate-800">สมุดบันทึกเวลาเรียนและการประเมินผลการเรียน (ระบบรายงานการเข้าสอน)</h3>
+                    <p class="text-xs text-slate-700 mt-0.5">
+                        <span id="printCourseInfo">วิชา: - | ระดับชั้น/ห้อง: -</span>
+                    </p>
+                </div>
+            </div>
+            <div class="text-right text-xs text-slate-700 font-sarabun">
+                <p id="printTeacherInfo">อาจารย์ผู้สอน: -</p>
+                <p id="printTermInfo">ภาคเรียนที่: -</p>
+            </div>
+        </div>
+
+        <!-- Print Matrix Table -->
+        <table id="printMatrixTable" class="w-full text-xs text-center border-collapse font-sarabun">
+            <!-- Dynamically cloned from matrix table on print -->
+        </table>
+
+        <!-- Signatures Section -->
+        <div class="signature-section grid grid-cols-3 gap-6 text-center text-xs mt-6 font-sarabun">
+            <div class="space-y-8">
+                <p>ลงชื่อ..............................................................ครูผู้สอน</p>
+                <p>(<span id="printSignTeacher">..............................................................</span>)</p>
+                <p>วันที่ .......... / .......... / ..............</p>
+            </div>
+            <div class="space-y-8">
+                <p>ลงชื่อ..............................................................หัวหน้าแผนกวิชา</p>
+                <p>(..............................................................)</p>
+                <p>วันที่ .......... / .......... / ..............</p>
+            </div>
+            <div class="space-y-8">
+                <p>ลงชื่อ..............................................................หัวหน้างานพัฒนาหลักสูตรฯ</p>
+                <p>(..............................................................)</p>
+                <p>วันที่ .......... / .......... / ..............</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- App JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
