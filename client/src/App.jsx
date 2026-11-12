@@ -1667,9 +1667,9 @@ export default function App() {
                       </div>
                     </div>
                   )}
-              </div>
-            )
-          })}
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -1817,7 +1817,7 @@ export default function App() {
                     {/* 5. Notes / Remarks Section */}
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '10.5pt', fontWeight: 700, marginBottom: '4px' }}>
-                        หมายเหตุ:
+                        ปัญหาและแนวทางการแก้ไข:
                       </div>
                       {renderRuledNotes(log.note)}
                     </div>
