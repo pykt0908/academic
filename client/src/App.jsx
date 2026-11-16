@@ -1842,7 +1842,7 @@ export default function App() {
                         { score: 'รวม', grade: '', isTotal: true }
                       ].map((row, rIdx) => (
                         <tr key={rIdx} style={{ fontWeight: row.isTotal ? 'bold' : 'normal' }}>
-                          <td style={{ border: '1px solid #000', padding: '1.2px 4px', textAlign: row.isTotal ? 'center' : 'left' }}>{row.score}</td>
+                          <td style={{ border: '1px solid #000', padding: '1.2px 4px', textAlign: 'center' }}>{row.score}</td>
                           <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.grade}</td>
                           <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.isTotal ? matrixData.info.totalStudents : ''}</td>
                           <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.isTotal ? '100%' : ''}</td>
