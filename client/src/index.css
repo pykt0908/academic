@@ -250,6 +250,13 @@ tr:hover .tb-sticky-3 {
     font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
   }
 
+  .cover-table th,
+  .cover-table td {
+    font-size: 8pt !important;
+    padding: 1.5px 3px !important;
+    line-height: 1.2 !important;
+  }
+
   th,
   table.print-table th {
     background-color: #ffffff !important;

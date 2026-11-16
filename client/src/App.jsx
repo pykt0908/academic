@@ -174,12 +174,12 @@ export default function App() {
     if (!matrixData || activeColumns.length === 0) return []
     const totalCols = activeColumns.length
     const totalStudents = matrixData.students ? matrixData.students.length : 0
-    const MAX_COLS_PER_PAGE = 22
+    const MAX_COLS_PER_PAGE = 18
     const MAX_STUDENTS_PER_PAGE = 16
 
     // 1. Horizontal Slicing (Teaching Periods)
     let colChunks = []
-    if (totalCols <= 24) {
+    if (totalCols <= 18) {
       colChunks = [{
         colStart: 0,
         colEnd: totalCols,
@@ -1310,6 +1310,97 @@ export default function App() {
                       >
                         สรุปเวลาเรียน
                       </TableCell>
+
+                      {/* คะแนนระหว่างภาค Header (Spans row 1, colSpan 5) */}
+                      <TableCell
+                        colSpan={5}
+                        rowSpan={1}
+                        align="center"
+                        sx={{
+                          color: '#0f172a',
+                          fontWeight: 700,
+                          fontSize: '0.92rem',
+                          borderLeft: '2px solid #64748b',
+                          borderRight: '1px solid #cbd5e1',
+                          borderBottom: '1px solid #cbd5e1',
+                          bgcolor: '#f8fafc',
+                          py: 0.7
+                        }}
+                      >
+                        คะแนนระหว่างภาค
+                      </TableCell>
+
+                      {/* คะแนนปลายภาค (Spans rows 1-4) */}
+                      <TableCell
+                        rowSpan={4}
+                        align="center"
+                        sx={{
+                          color: '#0f172a',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          borderRight: '1px solid #cbd5e1',
+                          borderBottom: '2px solid #64748b',
+                          bgcolor: '#f8fafc',
+                          width: 42,
+                          py: 0.5
+                        }}
+                      >
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', whiteSpace: 'nowrap' }}>คะแนนปลายภาค</div>
+                      </TableCell>
+
+                      {/* รวม (Spans rows 1-4) */}
+                      <TableCell
+                        rowSpan={4}
+                        align="center"
+                        sx={{
+                          color: '#0f172a',
+                          fontWeight: 700,
+                          fontSize: '0.88rem',
+                          borderRight: '1px solid #cbd5e1',
+                          borderBottom: '2px solid #64748b',
+                          bgcolor: '#f8fafc',
+                          width: 40,
+                          py: 0.5
+                        }}
+                      >
+                        รวม
+                      </TableCell>
+
+                      {/* ระดับผลการศึกษา (Spans rows 1-4) */}
+                      <TableCell
+                        rowSpan={4}
+                        align="center"
+                        sx={{
+                          color: '#0f172a',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          borderRight: '1px solid #cbd5e1',
+                          borderBottom: '2px solid #64748b',
+                          bgcolor: '#f8fafc',
+                          width: 42,
+                          py: 0.5
+                        }}
+                      >
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', whiteSpace: 'nowrap' }}>ระดับผลการศึกษา</div>
+                      </TableCell>
+
+                      {/* เลขที่ (Spans rows 1-4) */}
+                      <TableCell
+                        rowSpan={4}
+                        align="center"
+                        sx={{
+                          color: '#0f172a',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                          borderRight: '1px solid #cbd5e1',
+                          borderBottom: '2px solid #64748b',
+                          bgcolor: '#f8fafc',
+                          width: 36,
+                          py: 0.5
+                        }}
+                      >
+                        เลขที่
+                      </TableCell>
                     </TableRow>
 
                     {/* Row 2: Weeks */}
@@ -1333,6 +1424,23 @@ export default function App() {
                           </TableCell>
                         ))
                       ))}
+
+                      {/* Sub-columns under คะแนนระหว่างภาค: จิตพิสัย, ทดสอบย่อย 1, ทดสอบย่อย 2, สอบกลางภาค, รวม (Spans Rows 2-4) */}
+                      <TableCell rowSpan={3} align="center" sx={{ borderLeft: '2px solid #64748b', borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 36, py: 0.5 }}>
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>จิตพิสัย</div>
+                      </TableCell>
+                      <TableCell rowSpan={3} align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 36, py: 0.5 }}>
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>ทดสอบย่อย 1</div>
+                      </TableCell>
+                      <TableCell rowSpan={3} align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 36, py: 0.5 }}>
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>ทดสอบย่อย 2</div>
+                      </TableCell>
+                      <TableCell rowSpan={3} align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 36, py: 0.5 }}>
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>สอบกลางภาค</div>
+                      </TableCell>
+                      <TableCell rowSpan={3} align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 38, py: 0.5, fontWeight: 700, fontSize: '0.85rem' }}>
+                        รวม
+                      </TableCell>
                     </TableRow>
 
                     {/* Row 3: Dates */}
@@ -1399,7 +1507,7 @@ export default function App() {
                       <TableCell align="center" sx={{ color: '#0f172a', fontWeight: 700, fontSize: '0.88rem', width: 38, py: 0.5, borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b' }}>
                         ลา
                       </TableCell>
-                      <TableCell align="center" sx={{ color: '#0f172a', fontWeight: 700, fontSize: '0.88rem', width: 44, py: 0.5, borderBottom: '2px solid #64748b' }}>
+                      <TableCell align="center" sx={{ color: '#0f172a', fontWeight: 700, fontSize: '0.88rem', width: 44, py: 0.5, borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b' }}>
                         %
                       </TableCell>
                     </TableRow>
@@ -1522,8 +1630,37 @@ export default function App() {
                           <TableCell align="center" sx={{ fontWeight: 700, color: '#d97706', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.92rem' }}>
                             {std.summary.leave}
                           </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 700, color: '#0f172a', borderBottom: '1px solid #e2e8f0', fontSize: '0.92rem' }}>
+                          <TableCell align="center" sx={{ fontWeight: 700, color: '#0f172a', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.92rem' }}>
                             {std.summary.percent}%
+                          </TableCell>
+
+                          {/* Scores & Grade Cells */}
+                          <TableCell align="center" sx={{ borderLeft: '2px solid #64748b', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.score?.s1 || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.score?.s2 || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.score?.s3 || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.score?.s4 || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 700, borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.score?.sTotal || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.score?.fi || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 700, borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.score?.sSum || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 700, color: '#1d4ed8', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.95rem' }}>
+                            {std.score?.grade || '-'}
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            {std.no}
                           </TableCell>
                         </TableRow>
                       )
@@ -1577,29 +1714,57 @@ export default function App() {
                     <thead>
                       {/* Row 1: Months */}
                       <tr style={{ backgroundColor: '#ffffff' }}>
-                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '36px', fontSize: '10pt', backgroundColor: '#ffffff' }}>เลขที่</th>
-                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '80px', fontSize: '10pt', backgroundColor: '#ffffff' }}>เลขประจำตัว</th>
-                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 5px', textAlign: 'center', width: '160px', fontSize: '10pt', backgroundColor: '#ffffff' }}>ชื่อ - สกุล</th>
+                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '28px', fontSize: '9pt', backgroundColor: '#ffffff' }}>เลขที่</th>
+                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 2px', width: '68px', fontSize: '9pt', backgroundColor: '#ffffff' }}>เลขประจำตัว</th>
+                        <th rowSpan={4} style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', width: '135px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>ชื่อ - สกุล</th>
                         {page.monthGroups.map(m => (
-                          <th key={m.monthKey} colSpan={m.colspan} style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '10pt', backgroundColor: '#ffffff' }}>{m.monthName}</th>
+                          <th key={m.monthKey} colSpan={m.colspan} style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>{m.monthName}</th>
                         ))}
                         {page.isLastCol && (
-                          <th colSpan={4} rowSpan={3} style={{ border: '1px solid #000', padding: '3px 2px', width: '115px', fontSize: '10pt', backgroundColor: '#ffffff' }}>สรุป</th>
+                          <>
+                            <th colSpan={4} rowSpan={3} style={{ border: '1px solid #000', padding: '3px 2px', width: '85px', fontSize: '9pt', backgroundColor: '#ffffff' }}>สรุป</th>
+                            <th colSpan={5} rowSpan={1} style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '9pt', backgroundColor: '#ffffff' }}>คะแนนระหว่างภาค</th>
+                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>คะแนนปลายภาค</div>
+                            </th>
+                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>รวม</th>
+                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>ระดับผลการศึกษา</div>
+                            </th>
+                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>เลขที่</th>
+                          </>
                         )}
                       </tr>
                       <tr style={{ backgroundColor: '#ffffff' }}>
                         {page.monthGroups.map(m => (
                           m.weekGroups.map(w => (
-                            <th key={`${m.monthKey}-${w.weekNo}`} colSpan={w.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>ส.{w.weekNo}</th>
+                            <th key={`${m.monthKey}-${w.weekNo}`} colSpan={w.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9pt', backgroundColor: '#ffffff' }}>ส.{w.weekNo}</th>
                           ))
                         ))}
+                        {page.isLastCol && (
+                          <>
+                            <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '20px', fontSize: '7.5pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>จิตพิสัย</div>
+                            </th>
+                            <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '20px', fontSize: '7.5pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>ทดสอบย่อย 1</div>
+                            </th>
+                            <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '20px', fontSize: '7.5pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>ทดสอบย่อย 2</div>
+                            </th>
+                            <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '20px', fontSize: '7.5pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>สอบกลางภาค</div>
+                            </th>
+                            <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>รวม</th>
+                          </>
+                        )}
                       </tr>
                       <tr style={{ backgroundColor: '#ffffff' }}>
                         {page.monthGroups.map(m => (
                           m.weekGroups.map(w => (
                             w.dateGroups ? (
                               w.dateGroups.map(d => (
-                                <th key={d.dateStr} colSpan={d.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>{d.dateNum}</th>
+                                <th key={d.dateStr} colSpan={d.colspan} style={{ border: '1px solid #000', padding: '2px 1px', fontSize: '9pt', backgroundColor: '#ffffff' }}>{d.dateNum}</th>
                               ))
                             ) : (
                               <th key={w.weekNo} colSpan={w.colspan} style={{ border: '1px solid #000', backgroundColor: '#ffffff' }} />
@@ -1609,14 +1774,14 @@ export default function App() {
                       </tr>
                       <tr style={{ backgroundColor: '#ffffff', fontWeight: 'bold' }}>
                         {page.columns.map((c, i) => (
-                          <th key={i} style={{ border: '1px solid #000', padding: '2px 1px', minWidth: '20px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>{c.periodSeq || (page.colStart + i + 1)}</th>
+                          <th key={i} style={{ border: '1px solid #000', padding: '2px 1px', minWidth: '18px', fontSize: '9pt', backgroundColor: '#ffffff' }}>{c.periodSeq || (page.colStart + i + 1)}</th>
                         ))}
                         {page.isLastCol && (
                           <>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>มา</th>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>ขาด</th>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '28px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>ลา</th>
-                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '34px', fontSize: '9.5pt', backgroundColor: '#ffffff' }}>%</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '21px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>มา</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '21px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>ขาด</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '21px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>ลา</th>
+                            <th style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>%</th>
                           </>
                         )}
                       </tr>
@@ -1628,9 +1793,9 @@ export default function App() {
                         })
                         return (
                           <tr key={std.stdNo}>
-                            <td style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '10pt' }}>{std.no}</td>
-                            <td style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '10pt' }}>{std.stdNo}</td>
-                            <td style={{ border: '1px solid #000', padding: '3px 5px', textAlign: 'left', whiteSpace: 'nowrap', fontSize: '10pt' }}>{std.stdName}</td>
+                            <td style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '9pt' }}>{std.no}</td>
+                            <td style={{ border: '1px solid #000', padding: '3px 2px', fontSize: '9pt' }}>{std.stdNo}</td>
+                            <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'left', whiteSpace: 'nowrap', fontSize: '9.5pt' }}>{std.stdName}</td>
                             {pageChecks.map((chk, ci) => {
                               const code = chk ? chk.code : ''
                               let displayChar = ''
@@ -1642,7 +1807,7 @@ export default function App() {
                                 <td key={ci} style={{
                                   border: '1px solid #000',
                                   padding: '3px 1px',
-                                  fontSize: '11pt',
+                                  fontSize: '10pt',
                                   color: displayChar === 'ข' ? '#dc2626' : '#000',
                                   fontWeight: displayChar === 'ข' ? 'bold' : 'normal'
                                 }}>
@@ -1652,10 +1817,22 @@ export default function App() {
                             })}
                             {page.isLastCol && (
                               <>
-                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '10pt' }}>{std.summary.present}</td>
-                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '10pt', color: std.summary.absent > 0 ? '#dc2626' : '#000' }}>{std.summary.absent}</td>
-                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '10pt' }}>{std.summary.leave}</td>
-                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '10pt' }}>{std.summary.percent}%</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '9pt' }}>{std.summary.present}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '9pt', color: std.summary.absent > 0 ? '#dc2626' : '#000' }}>{std.summary.absent}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '9pt' }}>{std.summary.leave}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 'bold', fontSize: '9pt' }}>{std.summary.percent}%</td>
+
+                                {/* Score Columns */}
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontSize: '8.5pt' }}>{std.score?.s1 || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontSize: '8.5pt' }}>{std.score?.s2 || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontSize: '8.5pt' }}>{std.score?.s3 || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontSize: '8.5pt' }}>{std.score?.s4 || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontWeight: 'bold', fontSize: '8.5pt' }}>{std.score?.sTotal || '-'}</td>
+
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontSize: '8.5pt' }}>{std.score?.fi || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontWeight: 'bold', fontSize: '8.5pt' }}>{std.score?.sSum || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontWeight: 'bold', fontSize: '8.5pt' }}>{std.score?.grade || '-'}</td>
+                                <td style={{ border: '1px solid #000', padding: '3px 1px', fontSize: '8.5pt' }}>{std.no}</td>
                               </>
                             )}
                           </tr>
@@ -1840,14 +2017,21 @@ export default function App() {
                         { score: 'ผ่านวิชาที่ไม่มีหน่วยกิต', grade: 'ผ.' },
                         { score: 'ไม่ผ่านวิชาที่ไม่มีหน่วยกิต', grade: 'ม.ผ.' },
                         { score: 'รวม', grade: '', isTotal: true }
-                      ].map((row, rIdx) => (
-                        <tr key={rIdx} style={{ fontWeight: row.isTotal ? 'bold' : 'normal' }}>
-                          <td style={{ border: '1px solid #000', padding: '1.2px 4px', textAlign: 'center' }}>{row.score}</td>
-                          <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.grade}</td>
-                          <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.isTotal ? matrixData.info.totalStudents : ''}</td>
-                          <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.isTotal ? '100%' : ''}</td>
-                        </tr>
-                      ))}
+                      ].map((row, rIdx) => {
+                        const hasGrades = matrixData.gradeSummary?.hasAnyGrade
+                        const count = hasGrades ? (matrixData.gradeSummary?.counts?.[row.grade] || 0) : '-'
+                        const percent = hasGrades && matrixData.info.totalStudents > 0
+                          ? ((count !== '-' ? count : 0) / matrixData.info.totalStudents * 100).toFixed(1) + '%'
+                          : '-'
+                        return (
+                          <tr key={rIdx} style={{ fontWeight: row.isTotal ? 'bold' : 'normal' }}>
+                            <td style={{ border: '1px solid #000', padding: '1.2px 4px', textAlign: 'center' }}>{row.score}</td>
+                            <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.grade}</td>
+                            <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.isTotal ? matrixData.info.totalStudents : (hasGrades ? count : '-')}</td>
+                            <td style={{ border: '1px solid #000', padding: '1.2px 4px' }}>{row.isTotal ? (matrixData.info.totalStudents > 0 ? '100%' : '-') : (hasGrades ? percent : '-')}</td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
 

@@ -523,6 +523,22 @@ async function getAttendanceSheetData(pool, teacherNo, term, year, subNo, classN
 
     const checkedColumns = allColumns.filter(c => c.isChecked);
 
+    // 8. Query Student Scores from Result.dbo.tblScore
+    const scoresMap = new Map();
+    try {
+        const scoreResult = await executeSafeQuery(pool, `
+            SELECT StdNo, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, sTotal, Fi, sSum, Grade
+            FROM Result.dbo.tblScore
+            WHERE sTerm = @term AND sYear = @year AND SubNo = @subNo
+        `, { term: String(term), year: String(year), subNo: String(subNo) });
+
+        for (const row of scoreResult.recordset) {
+            scoresMap.set(String(row.StdNo).trim(), row);
+        }
+    } catch (e) {
+        console.warn('Could not fetch scores from Result.dbo.tblScore:', e.message);
+    }
+
     // Build student rows
     const studentRows = students.map((std, idx) => {
         const no = std.No_Room || String(idx + 1);
@@ -557,6 +573,24 @@ async function getAttendanceSheetData(pool, teacherNo, term, year, subNo, classN
         const totalTaught = checkedColumns.length;
         const percent = totalTaught > 0 ? ((presentCount / totalTaught) * 100).toFixed(1) : '100.0';
 
+        const sc = scoresMap.get(String(std.StdNo).trim()) || null;
+        const formatScore = (val) => {
+            if (val === null || val === undefined) return '-';
+            const s = String(val).trim();
+            return s === '' || s === 'XX' ? '-' : s;
+        };
+
+        const score = {
+            s1: formatScore(sc?.S1),
+            s2: formatScore(sc?.S2),
+            s3: formatScore(sc?.S3),
+            s4: formatScore(sc?.S4),
+            sTotal: formatScore(sc?.sTotal),
+            fi: formatScore(sc?.Fi),
+            sSum: formatScore(sc?.sSum),
+            grade: formatScore(sc?.Grade)
+        };
+
         return {
             no,
             stdNo: std.StdNo,
@@ -572,7 +606,8 @@ async function getAttendanceSheetData(pool, teacherNo, term, year, subNo, classN
                 percent,
                 amountTimeLearnAll: rclDet?.AmountTimeLearnAll || (allColumns.length - absentCount),
                 amountDayCut: rclDet?.AmountDayCut !== undefined ? rclDet.AmountDayCut : absentCount
-            }
+            },
+            score
         };
     });
 
@@ -776,6 +811,18 @@ app.get('/api/teacher/attendance-sheet', requireTeacherAuth, async (req, res) =>
                 amountAbsentMax: sheetData.rcl?.AmountAbsent || Math.floor((sheetData.allColumns.length || 80) * 0.2),
                 teachWeekDay: sheetData.rcl?.TeachWeekDay || sheetData.timetable.map(t => `${t.DayShortName} คาบ ${t.TimeNo}`).join(', ')
             },
+            gradeSummary: (() => {
+                const gradeCounts = {};
+                let hasAnyGrade = false;
+                sheetData.studentRows.forEach(std => {
+                    const g = std.score?.grade;
+                    if (g && g !== '-' && g !== 'XX') {
+                        hasAnyGrade = true;
+                        gradeCounts[g] = (gradeCounts[g] || 0) + 1;
+                    }
+                });
+                return { hasAnyGrade, counts: gradeCounts };
+            })(),
             monthGroups: buildMonthGroups(sheetData.allColumns),
             columns: sheetData.allColumns,
             checkedMonthGroups: buildMonthGroups(sheetData.checkedColumns),
