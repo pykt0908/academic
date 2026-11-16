@@ -492,7 +492,7 @@ export default function App() {
     }, 150)
   }
 
-  // Print Cover Page (หน้าปกสมุดบันทึกเวลาเรียน และประเมินผลการเรียน - A4 Portrait)
+  // Print Cover Page (หน้าปกสมุดบันทึกเวลาเรียน และประเมินผลการเรียน - A4 Landscape)
   const handlePrintCover = () => {
     let styleEl = document.getElementById('print-orientation-style')
     if (!styleEl) {
@@ -501,7 +501,7 @@ export default function App() {
       document.head.appendChild(styleEl)
     }
     styleEl.innerHTML = `
-      @page { size: A4 portrait; margin: 8mm 10mm; }
+      @page { size: A4 landscape; margin: 5mm 6mm; }
       @media print {
         *, table, th, td, tr {
           background-color: #ffffff !important;
@@ -1066,7 +1066,7 @@ export default function App() {
                       }
                     }}
                   >
-                    พิมพ์หน้าปกสมุดบันทึกฯ (A4)
+                    พิมพ์หน้าปกสมุดบันทึกฯ (A4 แนวนอน)
                   </Button>
 
                   <Button
@@ -1641,45 +1641,50 @@ export default function App() {
           </div>
         )}
 
-        {/* PRINT TEMPLATE - COVER PAGE (A4 Portrait • หน้าปกสมุดบันทึกเวลาเรียน และประเมินผลการเรียน) */}
+        {/* PRINT TEMPLATE - COVER PAGE (A4 Landscape • หน้าปกสมุดบันทึกเวลาเรียน และประเมินผลการเรียน) */}
         {printMode === 'cover' && matrixData && (
           <div className="print-only" style={{ padding: '0', fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif" }}>
             <div
-              className="print-page print-portrait-page"
+              className="print-page print-landscape-page"
               style={{
                 pageBreakAfter: 'auto',
                 boxSizing: 'border-box',
-                minHeight: '275mm',
+                width: '100%',
+                maxHeight: '198mm',
                 fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif",
                 color: '#000',
                 backgroundColor: '#ffffff',
                 background: '#ffffff',
-                padding: '8mm 12mm'
+                padding: '4mm 6mm'
               }}
             >
-              {/* 1. Header with Logo, School Name, Tagline */}
-              <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                <img src="/img/logo.png" alt="ตราวิทยาลัย" style={{ width: '60px', height: '60px', objectFit: 'contain', marginBottom: '3px' }} />
-                <div style={{ fontSize: '18pt', fontWeight: 'bold', lineHeight: 1.2 }}>
-                  วิทยาลัยเทคโนโลยีศรีราชา
-                </div>
-                <div style={{ fontSize: '13pt', fontWeight: 'bold', marginTop: '3px' }}>
-                  สมุดบันทึกเวลาเรียน และประเมินผลการเรียน
+              {/* 1. Header with Logo, School Name, Tagline & Level/Round Checkboxes */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1.5px solid #000', paddingBottom: '3px', marginBottom: '5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <img src="/img/logo.png" alt="ตราวิทยาลัย" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
+                  <div>
+                    <div style={{ fontSize: '15pt', fontWeight: 'bold', lineHeight: 1.15 }}>
+                      วิทยาลัยเทคโนโลยีศรีราชา
+                    </div>
+                    <div style={{ fontSize: '11.5pt', fontWeight: 'bold', color: '#111' }}>
+                      สมุดบันทึกเวลาเรียน และประเมินผลการเรียน
+                    </div>
+                  </div>
                 </div>
 
                 {/* Level & Round Checkboxes */}
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', marginTop: '8px', fontSize: '10.5pt' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '9pt', border: '1px solid #444', padding: '3px 10px', borderRadius: '2px' }}>
                   {/* Level */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 'bold' }}>ระดับ:</span>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ display: 'inline-block', width: '13px', height: '13px', border: '1.5px solid #000', textAlign: 'center', lineHeight: '11px', fontSize: '10pt', fontWeight: 'bold' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '1.2px solid #000', textAlign: 'center', lineHeight: '10px', fontSize: '9pt', fontWeight: 'bold' }}>
                         {matrixData.info.lavelNo === '1' ? '✓' : ''}
                       </span>
                       <span>ปวช.</span>
                     </label>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ display: 'inline-block', width: '13px', height: '13px', border: '1.5px solid #000', textAlign: 'center', lineHeight: '11px', fontSize: '10pt', fontWeight: 'bold' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '1.2px solid #000', textAlign: 'center', lineHeight: '10px', fontSize: '9pt', fontWeight: 'bold' }}>
                         {matrixData.info.lavelNo !== '1' ? '✓' : ''}
                       </span>
                       <span>ปวส.</span>
@@ -1689,22 +1694,22 @@ export default function App() {
                   <span style={{ color: '#888' }}>|</span>
 
                   {/* Round */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 'bold' }}>รอบ:</span>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ display: 'inline-block', width: '13px', height: '13px', border: '1.5px solid #000', textAlign: 'center', lineHeight: '11px', fontSize: '10pt', fontWeight: 'bold' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '1.2px solid #000', textAlign: 'center', lineHeight: '10px', fontSize: '9pt', fontWeight: 'bold' }}>
                         {matrixData.info.roundNo === '1' ? '✓' : ''}
                       </span>
                       <span>เช้า</span>
                     </label>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ display: 'inline-block', width: '13px', height: '13px', border: '1.5px solid #000', textAlign: 'center', lineHeight: '11px', fontSize: '10pt', fontWeight: 'bold' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '1.2px solid #000', textAlign: 'center', lineHeight: '10px', fontSize: '9pt', fontWeight: 'bold' }}>
                         {matrixData.info.roundNo === '6' ? '✓' : ''}
                       </span>
                       <span>บ่าย</span>
                     </label>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ display: 'inline-block', width: '13px', height: '13px', border: '1.5px solid #000', textAlign: 'center', lineHeight: '11px', fontSize: '10pt', fontWeight: 'bold' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '1.2px solid #000', textAlign: 'center', lineHeight: '10px', fontSize: '9pt', fontWeight: 'bold' }}>
                         {matrixData.info.roundNo === '7' ? '✓' : ''}
                       </span>
                       <span>ทวิภาคี</span>
@@ -1713,19 +1718,19 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 2. Middle Section: Two Columns (Left = Subject & Advisor, Right = Category & Department) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '18px', fontSize: '9.5pt', marginBottom: '10px' }}>
+              {/* 2. Middle Section: Two Columns (Left = Subject & Advisor, Right = Category, Department & Class Info) */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', fontSize: '8.5pt', marginBottom: '6px' }}>
                 {/* Left Column */}
-                <div style={{ flex: 1.15, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <strong style={{ whiteSpace: 'nowrap', width: '55px' }}>ชื่อวิชา:</strong>
+                    <strong style={{ whiteSpace: 'nowrap', width: '48px' }}>ชื่อวิชา:</strong>
                     <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', fontWeight: 600 }}>
                       {matrixData.info.subjectName}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <strong style={{ whiteSpace: 'nowrap', width: '55px' }}>รหัสวิชา:</strong>
+                    <strong style={{ whiteSpace: 'nowrap', width: '48px' }}>รหัสวิชา:</strong>
                     <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', fontWeight: 600 }}>
                       {matrixData.info.subNo}
                     </span>
@@ -1739,7 +1744,7 @@ export default function App() {
                       </span>
                       <span style={{ whiteSpace: 'nowrap' }}>คาบ/สัปดาห์</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', width: '130px' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', width: '120px' }}>
                       <strong style={{ whiteSpace: 'nowrap' }}>หน่วยการเรียน:</strong>
                       <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', textAlign: 'center', margin: '0 4px' }}>
                         {matrixData.info.unit || 2}
@@ -1763,59 +1768,48 @@ export default function App() {
                 </div>
 
                 {/* Right Column */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <div style={{ flex: 1.25, display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   {/* ประเภทวิชา */}
-                  <div>
-                    <strong>ประเภทวิชา:</strong>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2px', marginLeft: '8px', marginTop: '1px', fontSize: '9pt' }}>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <span style={{ display: 'inline-block', width: '11px', height: '11px', border: '1px solid #000', textAlign: 'center', lineHeight: '9px', fontSize: '8pt', fontWeight: 'bold' }}>
-                          {matrixData.info.subType === 'บริหารธุรกิจ' ? '✓' : ''}
-                        </span>
-                        <span>บริหารธุรกิจ</span>
-                      </label>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <span style={{ display: 'inline-block', width: '11px', height: '11px', border: '1px solid #000', textAlign: 'center', lineHeight: '9px', fontSize: '8pt', fontWeight: 'bold' }}>
-                          {matrixData.info.subType === 'อุตสาหกรรมท่องเที่ยว' ? '✓' : ''}
-                        </span>
-                        <span>อุตสาหกรรมท่องเที่ยว</span>
-                      </label>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <span style={{ display: 'inline-block', width: '11px', height: '11px', border: '1px solid #000', textAlign: 'center', lineHeight: '9px', fontSize: '8pt', fontWeight: 'bold' }}>
-                          {matrixData.info.subType === 'อุตสาหกรรม' ? '✓' : ''}
-                        </span>
-                        <span>อุตสาหกรรม</span>
-                      </label>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <span style={{ display: 'inline-block', width: '11px', height: '11px', border: '1px solid #000', textAlign: 'center', lineHeight: '9px', fontSize: '8pt', fontWeight: 'bold' }}>
-                          {matrixData.info.subType === 'อุตสาหกรรมดิจิทัล และเทคโนโลยีสารสนเทศ' ? '✓' : ''}
-                        </span>
-                        <span>อุตสาหกรรมดิจิทัล และเทคโนโลยีสารสนเทศ</span>
-                      </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong style={{ whiteSpace: 'nowrap' }}>ประเภทวิชา:</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', fontSize: '8pt' }}>
+                      {[
+                        'บริหารธุรกิจ',
+                        'อุตสาหกรรมท่องเที่ยว',
+                        'อุตสาหกรรม',
+                        'อุตสาหกรรมดิจิทัล และเทคโนโลยีสารสนเทศ'
+                      ].map((type, tIdx) => (
+                        <label key={tIdx} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <span style={{ display: 'inline-block', width: '10px', height: '10px', border: '1px solid #000', textAlign: 'center', lineHeight: '8px', fontSize: '7pt', fontWeight: 'bold' }}>
+                            {matrixData.info.subType === type ? '✓' : ''}
+                          </span>
+                          <span>{type}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
 
                   {/* สาขาวิชา */}
                   <div>
-                    <strong>สาขาวิชา:</strong>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5px 6px', marginLeft: '8px', marginTop: '1px', fontSize: '8.5pt' }}>
+                    <strong style={{ whiteSpace: 'nowrap' }}>สาขาวิชา:</strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1px 4px', marginTop: '1px', fontSize: '7.5pt' }}>
                       {[
                         { label: 'การบัญชี', match: ['01', 'บัญชี'] },
-                        { label: 'ช่างยนต์', match: ['08', 'ช่างยนต์'] },
                         { label: 'การตลาด', match: ['02', 'การตลาด'] },
-                        { label: 'ช่างกลโรงงาน', match: ['10', 'เครื่องกล', 'ช่างกล'] },
                         { label: 'โลจิสติกส์', match: ['05', '12', '14', 'โลจิสติกส์'] },
-                        { label: 'ช่างไฟฟ้า', match: ['09', '16', 'ช่างไฟฟ้า'] },
                         { label: 'คอมพิวเตอร์', match: ['คอมพิวเตอร์'] },
+                        { label: 'คอมฯธุรกิจ', match: ['03', 'คอมพิวเตอร์ธุรกิจ', '13', 'ธุรกิจดิจิทัล'] },
+                        { label: 'คอมฯกราฟิก', match: ['กราฟิก'] },
+                        { label: 'ช่างยนต์', match: ['08', 'ช่างยนต์'] },
+                        { label: 'ช่างกลโรงงาน', match: ['10', 'เครื่องกล', 'ช่างกล'] },
+                        { label: 'ช่างไฟฟ้า', match: ['09', '16', 'ช่างไฟฟ้า'] },
                         { label: 'ไฟฟ้า', match: ['11', '17', 'ไฟฟ้า'] },
-                        { label: 'คอมพิวเตอร์ธุรกิจ', match: ['03', 'คอมพิวเตอร์ธุรกิจ', '13', 'ธุรกิจดิจิทัล'] },
-                        { label: 'เมคคาทรอนิกส์และหุ่นยนต์', match: ['18', 'เมคคาทรอนิกส์'] },
-                        { label: 'คอมพิวเตอร์กราฟิก', match: ['กราฟิก'] }
+                        { label: 'เมคคาทรอนิกส์ฯ', match: ['18', 'เมคคาทรอนิกส์'] }
                       ].map((dep, dIdx) => {
                         const isDepChecked = dep.match.some(m => matrixData.info.departNo === m || (matrixData.info.departName && matrixData.info.departName.includes(m)))
                         return (
-                          <label key={dIdx} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ display: 'inline-block', width: '10px', height: '10px', border: '1px solid #000', textAlign: 'center', lineHeight: '8px', fontSize: '7pt', fontWeight: 'bold' }}>
+                          <label key={dIdx} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                            <span style={{ display: 'inline-block', width: '9px', height: '9px', border: '1px solid #000', textAlign: 'center', lineHeight: '7px', fontSize: '6.5pt', fontWeight: 'bold' }}>
                               {isDepChecked ? '✓' : ''}
                             </span>
                             <span>{dep.label}</span>
@@ -1825,14 +1819,14 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '2px' }}>
-                    <strong style={{ whiteSpace: 'nowrap' }}>ระดับชั้น:</strong>
-                    <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', paddingLeft: '6px' }}>
-                      {matrixData.info.className}
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  {/* Class Info Rows */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', flex: 1.2 }}>
+                      <strong style={{ whiteSpace: 'nowrap' }}>ระดับชั้น:</strong>
+                      <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', paddingLeft: '4px' }}>
+                        {matrixData.info.className}
+                      </span>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', flex: 1 }}>
                       <strong style={{ whiteSpace: 'nowrap' }}>เวลาเรียนเต็ม:</strong>
                       <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', textAlign: 'center' }}>
@@ -1840,7 +1834,7 @@ export default function App() {
                       </span>
                       <span>คาบ</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', flex: 0.9 }}>
                       <strong style={{ whiteSpace: 'nowrap' }}>80%:</strong>
                       <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', textAlign: 'center' }}>
                         {matrixData.info.hours80 || Math.round(matrixData.info.amountTeachAll * 0.8)}
@@ -1849,49 +1843,47 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', width: '100px' }}>
                       <strong style={{ whiteSpace: 'nowrap' }}>ภาคเรียนที่:</strong>
                       <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', textAlign: 'center' }}>
                         {matrixData.info.term}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', width: '110px' }}>
                       <strong style={{ whiteSpace: 'nowrap' }}>ปีการศึกษา:</strong>
                       <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', textAlign: 'center' }}>
                         {matrixData.info.year}
                       </span>
                     </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <strong style={{ whiteSpace: 'nowrap' }}>จำนวนนักศึกษา:</strong>
-                    <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', textAlign: 'center' }}>
-                      {matrixData.info.totalStudents}
-                    </span>
-                    <span>คน</span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <strong style={{ whiteSpace: 'nowrap' }}>อาจารย์ผู้สอน:</strong>
-                    <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', paddingLeft: '6px', fontWeight: 600 }}>
-                      {teacher?.TeacherName || matrixData.teacher?.teacherName}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', width: '120px' }}>
+                      <strong style={{ whiteSpace: 'nowrap' }}>จำนวนนักศึกษา:</strong>
+                      <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', textAlign: 'center' }}>
+                        {matrixData.info.totalStudents}
+                      </span>
+                      <span>คน</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', flex: 1 }}>
+                      <strong style={{ whiteSpace: 'nowrap' }}>อาจารย์ผู้สอน:</strong>
+                      <span style={{ flex: 1, borderBottom: '1px dotted #444', paddingBottom: '1px', paddingLeft: '4px', fontWeight: 600 }}>
+                        {teacher?.TeacherName || matrixData.teacher?.teacherName}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* 3. Lower Section: Grade Summary Table (Left) + Approval Workflow (Right) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', borderTop: '1px solid #000', paddingTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', borderTop: '1.2px solid #000', paddingTop: '4px' }}>
                 {/* Left: Grade Table */}
-                <div style={{ width: '48%' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '8.5pt', fontFamily: 'inherit' }}>
+                <div style={{ width: '35%' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '7.5pt', fontFamily: 'inherit' }}>
                     <thead>
-                      <tr>
-                        <th style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>ช่วงคะแนน</th>
-                        <th style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold', width: '50px' }}>ระดับคะแนน</th>
-                        <th style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold', width: '42px' }}>จำนวนคน</th>
-                        <th style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold', width: '52px' }}>คิดเป็นร้อยละ</th>
+                      <tr style={{ backgroundColor: '#f5f5f5' }}>
+                        <th style={{ border: '1px solid #000', padding: '1.5px 2px', fontWeight: 'bold' }}>ช่วงคะแนน</th>
+                        <th style={{ border: '1px solid #000', padding: '1.5px 2px', fontWeight: 'bold', width: '42px' }}>ระดับคะแนน</th>
+                        <th style={{ border: '1px solid #000', padding: '1.5px 2px', fontWeight: 'bold', width: '36px' }}>จำนวนคน</th>
+                        <th style={{ border: '1px solid #000', padding: '1.5px 2px', fontWeight: 'bold', width: '44px' }}>คิดเป็นร้อยละ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1912,18 +1904,18 @@ export default function App() {
                         { score: 'รวม', grade: '', isTotal: true }
                       ].map((row, rIdx) => (
                         <tr key={rIdx} style={{ fontWeight: row.isTotal ? 'bold' : 'normal' }}>
-                          <td style={{ border: '1px solid #000', padding: '1.5px 3px', textAlign: row.isTotal ? 'center' : 'left' }}>{row.score}</td>
-                          <td style={{ border: '1px solid #000', padding: '1.5px 3px' }}>{row.grade}</td>
-                          <td style={{ border: '1px solid #000', padding: '1.5px 3px' }}>{row.isTotal ? matrixData.info.totalStudents : ''}</td>
-                          <td style={{ border: '1px solid #000', padding: '1.5px 3px' }}>{row.isTotal ? '100%' : ''}</td>
+                          <td style={{ border: '1px solid #000', padding: '1px 2px', textAlign: row.isTotal ? 'center' : 'left' }}>{row.score}</td>
+                          <td style={{ border: '1px solid #000', padding: '1px 2px' }}>{row.grade}</td>
+                          <td style={{ border: '1px solid #000', padding: '1px 2px' }}>{row.isTotal ? matrixData.info.totalStudents : ''}</td>
+                          <td style={{ border: '1px solid #000', padding: '1px 2px' }}>{row.isTotal ? '100%' : ''}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
 
                   {/* Submission Note & Teacher Signature */}
-                  <div style={{ marginTop: '8px', fontSize: '8.5pt', textAlign: 'center' }}>
-                    <div style={{ textAlign: 'left', marginBottom: '3px', fontWeight: 500 }}>
+                  <div style={{ marginTop: '5px', fontSize: '7.5pt', textAlign: 'center' }}>
+                    <div style={{ textAlign: 'left', marginBottom: '2px', fontWeight: 500 }}>
                       จึงเรียนมาเพื่อโปรดอนุมัติ
                     </div>
                     <div style={{ margin: '1px 0' }}>ลงชื่อ..............................................................</div>
@@ -1933,66 +1925,80 @@ export default function App() {
                 </div>
 
                 {/* Right: Approval Section */}
-                <div style={{ width: '50%', fontSize: '8.5pt', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '1px solid #ddd', paddingLeft: '12px' }}>
-                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9.5pt', textDecoration: 'underline' }}>
+                <div style={{ width: '64%', display: 'flex', flexDirection: 'column', borderLeft: '1px solid #bbb', paddingLeft: '8px' }}>
+                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9pt', textDecoration: 'underline' }}>
                     อนุมัติผลการเรียน
                   </div>
 
-                  <div style={{ fontSize: '8pt', lineHeight: 1.35, color: '#222' }}>
-                    <strong>เสนอ ผู้อำนวยการวิทยาลัย</strong><br />
+                  <div style={{ fontSize: '7.5pt', lineHeight: 1.3, color: '#222', margin: '2px 0 4px 0' }}>
+                    <strong>เสนอ ผู้อำนวยการวิทยาลัย</strong> &nbsp;
                     ตามที่ข้าพเจ้า... ได้รับมอบหมายให้ดำเนินการสอน ในวิชานี้ บัดนี้ได้บันทึกเวลาเรียนและประเมินผลการเรียนของนักศึกษาเสร็จเรียบร้อยแล้ว ดังปรากฏตามรายละเอียดด้านข้างนี้
                   </div>
 
-                  {/* 1. หัวหน้าหมวด */}
-                  <div style={{ textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: '3px' }}>
-                    <div style={{ textAlign: 'left', fontSize: '8pt', fontWeight: 500, marginBottom: '1px' }}>
-                      ตรวจสอบความถูกต้องแล้ว
+                  {/* 4-Column Horizontal Approvals */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px', flex: 1 }}>
+                    {/* 1. หัวหน้าหมวด */}
+                    <div style={{ border: '1px solid #999', padding: '3px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '7.5pt' }}>
+                      <div style={{ textAlign: 'left', fontWeight: 600, lineHeight: 1.2 }}>
+                        ตรวจสอบความถูกต้องแล้ว
+                      </div>
+                      <div>
+                        <div style={{ margin: '4px 0 1px 0' }}>ลงชื่อ......................................</div>
+                        <div>(......................................)</div>
+                        <div style={{ fontWeight: 600, marginTop: '2px' }}>หัวหน้าหมวด</div>
+                        <div style={{ fontSize: '7pt', color: '#444', marginTop: '1px' }}>วันที่ ..... / ..... / .........</div>
+                      </div>
                     </div>
-                    <div>ลงชื่อ..............................................................</div>
-                    <div>(..............................................................)</div>
-                    <div style={{ fontWeight: 600 }}>หัวหน้าหมวด</div>
-                    <div style={{ fontSize: '7.5pt', color: '#444' }}>วันที่ .......... / .......... / ..............</div>
-                  </div>
 
-                  {/* 2. หัวหน้างานวัดผลและประเมินผลผู้เรียน */}
-                  <div style={{ textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: '3px' }}>
-                    <div style={{ textAlign: 'left', fontSize: '8pt', fontWeight: 500, marginBottom: '1px' }}>
-                      พิจารณาเห็นควรมอบหมายผู้สอนเสนอ จึงขอเสนอต่อวิชาการเพื่อพิจารณา
+                    {/* 2. หัวหน้างานวัดผลและประเมินผลผู้เรียน */}
+                    <div style={{ border: '1px solid #999', padding: '3px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '7.5pt' }}>
+                      <div style={{ textAlign: 'left', fontWeight: 600, lineHeight: 1.2 }}>
+                        พิจารณาเห็นควรมอบหมายผู้สอนเสนอ จึงขอเสนอต่อวิชาการเพื่อพิจารณา
+                      </div>
+                      <div>
+                        <div style={{ margin: '4px 0 1px 0' }}>ลงชื่อ......................................</div>
+                        <div>(......................................)</div>
+                        <div style={{ fontWeight: 600, marginTop: '2px' }}>หัวหน้างานวัดผลฯ</div>
+                        <div style={{ fontSize: '7pt', color: '#444', marginTop: '1px' }}>วันที่ ..... / ..... / .........</div>
+                      </div>
                     </div>
-                    <div>ลงชื่อ..............................................................</div>
-                    <div>(..............................................................)</div>
-                    <div style={{ fontWeight: 600 }}>หัวหน้างานวัดผลและประเมินผลผู้เรียน</div>
-                    <div style={{ fontSize: '7.5pt', color: '#444' }}>วันที่ .......... / .......... / ..............</div>
-                  </div>
 
-                  {/* 3. รองผู้อำนวยการฝ่ายวิชาการ */}
-                  <div style={{ textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: '3px' }}>
-                    <div style={{ textAlign: 'left', fontSize: '8pt', fontWeight: 500, marginBottom: '1px' }}>
-                      ความเห็นของรองผู้อำนวยการฝ่ายวิชาการ : พิจารณาแล้วเห็นสมควรอนุมัติผลการเรียนได้
+                    {/* 3. รองผู้อำนวยการฝ่ายวิชาการ */}
+                    <div style={{ border: '1px solid #999', padding: '3px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '7.5pt' }}>
+                      <div style={{ textAlign: 'left', fontWeight: 600, lineHeight: 1.2 }}>
+                        ความเห็นรอง ผอ. ฝ่ายวิชาการ :<br />
+                        <span style={{ fontWeight: 'normal' }}>พิจารณาแล้วเห็นสมควรอนุมัติผลการเรียนได้</span>
+                      </div>
+                      <div>
+                        <div style={{ margin: '4px 0 1px 0' }}>ลงชื่อ......................................</div>
+                        <div>(......................................)</div>
+                        <div style={{ fontWeight: 600, marginTop: '2px' }}>รอง ผอ. ฝ่ายวิชาการ</div>
+                        <div style={{ fontSize: '7pt', color: '#444', marginTop: '1px' }}>วันที่ ..... / ..... / .........</div>
+                      </div>
                     </div>
-                    <div>ลงชื่อ..............................................................</div>
-                    <div>(..............................................................)</div>
-                    <div style={{ fontWeight: 600 }}>รองผู้อำนวยการฝ่ายวิชาการ</div>
-                    <div style={{ fontSize: '7.5pt', color: '#444' }}>วันที่ .......... / .......... / ..............</div>
-                  </div>
 
-                  {/* 4. ความเห็นผู้อำนวยการวิทยาลัย */}
-                  <div style={{ textAlign: 'center', border: '1px solid #000', padding: '4px 6px', backgroundColor: '#fff' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '8.5pt', marginBottom: '2px' }}>ความเห็นผู้อำนวยการวิทยาลัย</div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', margin: '2px 0 3px 0' }}>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ display: 'inline-block', width: '11px', height: '11px', border: '1px solid #000' }}></span>
-                        <span>อนุมัติ</span>
-                      </label>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ display: 'inline-block', width: '11px', height: '11px', border: '1px solid #000' }}></span>
-                        <span>ไม่อนุมัติ</span>
-                      </label>
+                    {/* 4. ความเห็นผู้อำนวยการวิทยาลัย */}
+                    <div style={{ border: '1.5px solid #000', padding: '3px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '7.5pt', backgroundColor: '#fafafa' }}>
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '7.5pt' }}>ความเห็นผู้อำนวยการ</div>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', margin: '2px 0' }}>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                            <span style={{ display: 'inline-block', width: '9px', height: '9px', border: '1px solid #000' }}></span>
+                            <span>อนุมัติ</span>
+                          </label>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                            <span style={{ display: 'inline-block', width: '9px', height: '9px', border: '1px solid #000' }}></span>
+                            <span>ไม่อนุมัติ</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ margin: '3px 0 1px 0' }}>ลงชื่อ......................................</div>
+                        <div>(......................................)</div>
+                        <div style={{ fontWeight: 600, marginTop: '2px' }}>ผู้อำนวยการวิทยาลัยฯ</div>
+                        <div style={{ fontSize: '7pt', color: '#444', marginTop: '1px' }}>วันที่ ..... / ..... / .........</div>
+                      </div>
                     </div>
-                    <div>ลงชื่อ..............................................................</div>
-                    <div>(..............................................................)</div>
-                    <div style={{ fontWeight: 600 }}>ผู้อำนวยการวิทยาลัยเทคโนโลยีศรีราชา</div>
-                    <div style={{ fontSize: '7.5pt', color: '#444' }}>วันที่ .......... / .......... / ..............</div>
                   </div>
                 </div>
               </div>
