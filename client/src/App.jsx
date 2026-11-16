@@ -1355,15 +1355,16 @@ export default function App() {
                         sx={{
                           color: '#0f172a',
                           fontWeight: 700,
-                          fontSize: '0.88rem',
+                          fontSize: '0.82rem',
                           borderRight: '1px solid #cbd5e1',
                           borderBottom: '2px solid #64748b',
                           bgcolor: '#f8fafc',
                           width: 40,
-                          py: 0.5
+                          py: 0.5,
+                          verticalAlign: 'middle'
                         }}
                       >
-                        รวม
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', whiteSpace: 'nowrap' }}>รวม</div>
                       </TableCell>
 
                       {/* ระดับผลการศึกษา (Spans rows 1-4) */}
@@ -1378,7 +1379,8 @@ export default function App() {
                           borderBottom: '2px solid #64748b',
                           bgcolor: '#f8fafc',
                           width: 42,
-                          py: 0.5
+                          py: 0.5,
+                          verticalAlign: 'middle'
                         }}
                       >
                         <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', whiteSpace: 'nowrap' }}>ระดับผลการศึกษา</div>
@@ -1391,15 +1393,16 @@ export default function App() {
                         sx={{
                           color: '#0f172a',
                           fontWeight: 700,
-                          fontSize: '0.85rem',
+                          fontSize: '0.82rem',
                           borderRight: '1px solid #cbd5e1',
                           borderBottom: '2px solid #64748b',
                           bgcolor: '#f8fafc',
                           width: 36,
-                          py: 0.5
+                          py: 0.5,
+                          verticalAlign: 'middle'
                         }}
                       >
-                        เลขที่
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', whiteSpace: 'nowrap' }}>เลขที่</div>
                       </TableCell>
                     </TableRow>
 
@@ -1438,8 +1441,8 @@ export default function App() {
                       <TableCell rowSpan={3} align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 36, py: 0.5 }}>
                         <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>สอบกลางภาค</div>
                       </TableCell>
-                      <TableCell rowSpan={3} align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 38, py: 0.5, fontWeight: 700, fontSize: '0.85rem' }}>
-                        รวม
+                      <TableCell rowSpan={3} align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', bgcolor: '#f8fafc', width: 38, py: 0.5, verticalAlign: 'middle' }}>
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', margin: '0 auto', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>รวม</div>
                       </TableCell>
                     </TableRow>
 
@@ -1727,11 +1730,15 @@ export default function App() {
                             <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
                               <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>คะแนนปลายภาค</div>
                             </th>
-                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>รวม</th>
+                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>รวม</div>
+                            </th>
                             <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
                               <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>ระดับผลการศึกษา</div>
                             </th>
-                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>เลขที่</th>
+                            <th rowSpan={4} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>เลขที่</div>
+                            </th>
                           </>
                         )}
                       </tr>
@@ -1755,7 +1762,9 @@ export default function App() {
                             <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '20px', fontSize: '7.5pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
                               <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>สอบกลางภาค</div>
                             </th>
-                            <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '22px', fontSize: '8.5pt', backgroundColor: '#ffffff' }}>รวม</th>
+                            <th rowSpan={3} style={{ border: '1px solid #000', padding: '2px 1px', width: '20px', fontSize: '7.5pt', backgroundColor: '#ffffff', verticalAlign: 'middle' }}>
+                              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', margin: '0 auto' }}>รวม</div>
+                            </th>
                           </>
                         )}
                       </tr>
