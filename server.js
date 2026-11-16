@@ -641,31 +641,64 @@ app.get('/api/teacher/attendance-sheet', requireTeacherAuth, async (req, res) =>
 
         const subjectInfo = verifyResult.recordset[0];
 
-        // Query Classroom Advisor (อาจารย์ที่ปรึกษา) from Misschool
+        const lavelNo = classNo.length >= 1 ? classNo.substring(0, 1) : '';
+        const departNo = classNo.length >= 3 ? classNo.substring(1, 3) : '';
+        const roundNo = classNo.length >= 4 ? classNo.substring(3, 4) : '';
+        const yearNo = classNo.length >= 5 ? classNo.substring(4, 5) : '';
+        const roomNo = classNo.length >= 6 ? classNo.substring(5) : '';
+
+        // Query Classroom Advisor (อาจารย์ที่ปรึกษา) from Misschool Government.dbo.tblTeacherCounSel
         let advisorName = '';
         try {
+            // 1. Exact match by current Year + Term + Class components in tblTeacherCounSel
             const advisorRes1 = await executeSafeQuery(pool, `
                 SELECT TOP 1 IsNull(P.PrefixName,'') + H.Fname + ' ' + H.Lname AS AdvisorName
-                FROM Vichakarn.dbo.tblTeach T
-                JOIN Personal.dbo.tblTeacherHis H ON T.TeacherNo = H.TeacherNo
+                FROM Government.dbo.tblTeacherCounSel C
+                JOIN Personal.dbo.tblTeacherHis H ON C.TeacherNo = H.TeacherNo
                 LEFT JOIN Basedata.dbo.tblPrefix P ON H.PrefixNo = P.PrefixNo
-                WHERE (T.LavelNo + T.DepartNo + T.RoundNo + T.Year + T.Room = @classNo)
-                  AND T.SubNo = '00000-0001'
-                ORDER BY CASE WHEN T.sYear = @year AND T.sTerm = @term THEN 0 ELSE 1 END, T.DateEdit DESC
-            `, { classNo, year: String(year), term: String(term) });
+                WHERE C.sYear = @year
+                  AND C.sTerm = @term
+                  AND C.LavelNo = @lavelNo
+                  AND C.DepartNo = @departNo
+                  AND C.RoundNo = @roundNo
+                  AND C.Year = @yearNo
+                  AND C.Room = @roomNo
+                ORDER BY C.No DESC
+            `, { year: String(year), term: String(term), lavelNo, departNo, roundNo, yearNo, roomNo });
+
             if (advisorRes1.recordset.length > 0 && advisorRes1.recordset[0].AdvisorName) {
                 advisorName = advisorRes1.recordset[0].AdvisorName;
             } else {
+                // 2. Fallback to most recent Year/Term in tblTeacherCounSel
                 const advisorRes2 = await executeSafeQuery(pool, `
                     SELECT TOP 1 IsNull(P.PrefixName,'') + H.Fname + ' ' + H.Lname AS AdvisorName
-                    FROM Government.dbo.tblInputStudentInRowByTeacher R
-                    JOIN Personal.dbo.tblTeacherHis H ON R.TeacherNo = H.TeacherNo
+                    FROM Government.dbo.tblTeacherCounSel C
+                    JOIN Personal.dbo.tblTeacherHis H ON C.TeacherNo = H.TeacherNo
                     LEFT JOIN Basedata.dbo.tblPrefix P ON H.PrefixNo = P.PrefixNo
-                    WHERE R.ClassNo = @classNo
-                    ORDER BY R.DateInput DESC
-                `, { classNo });
+                    WHERE C.LavelNo = @lavelNo
+                      AND C.DepartNo = @departNo
+                      AND C.RoundNo = @roundNo
+                      AND C.Year = @yearNo
+                      AND C.Room = @roomNo
+                    ORDER BY C.sYear DESC, C.sTerm DESC, C.No DESC
+                `, { lavelNo, departNo, roundNo, yearNo, roomNo });
+
                 if (advisorRes2.recordset.length > 0 && advisorRes2.recordset[0].AdvisorName) {
                     advisorName = advisorRes2.recordset[0].AdvisorName;
+                } else {
+                    // 3. Fallback to tblInputStudentInRowByTeacher
+                    const advisorRes3 = await executeSafeQuery(pool, `
+                        SELECT TOP 1 IsNull(P.PrefixName,'') + H.Fname + ' ' + H.Lname AS AdvisorName
+                        FROM Government.dbo.tblInputStudentInRowByTeacher R
+                        JOIN Personal.dbo.tblTeacherHis H ON R.TeacherNo = H.TeacherNo
+                        LEFT JOIN Basedata.dbo.tblPrefix P ON H.PrefixNo = P.PrefixNo
+                        WHERE R.ClassNo = @classNo
+                        ORDER BY R.DateInput DESC
+                    `, { classNo });
+
+                    if (advisorRes3.recordset.length > 0 && advisorRes3.recordset[0].AdvisorName) {
+                        advisorName = advisorRes3.recordset[0].AdvisorName;
+                    }
                 }
             }
         } catch (e) {
@@ -681,12 +714,6 @@ app.get('/api/teacher/attendance-sheet', requireTeacherAuth, async (req, res) =>
             classNo,
             dateBegin
         );
-
-        const lavelNo = classNo.length >= 1 ? classNo.substring(0, 1) : '';
-        const departNo = classNo.length >= 3 ? classNo.substring(1, 3) : '';
-        const roundNo = classNo.length >= 4 ? classNo.substring(3, 4) : '';
-        const yearNo = classNo.length >= 5 ? classNo.substring(4, 5) : '';
-        const roomNo = classNo.length >= 6 ? classNo.substring(5) : '';
 
         const ROUND_NAMES = {
             '1': 'เช้า',
