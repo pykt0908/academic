@@ -1447,48 +1447,131 @@ export default function App() {
             </TableContainer>
 
             {/* Signature Section on Web View */}
+            {/* Signatures Footer (Summary row for signatures on screen) */}
             {matrixData && (
               <Box
                 className="no-print"
                 sx={{
-                  p: 2,
+                  p: 3,
                   borderTop: '1px solid #cbd5e1',
                   bgcolor: '#ffffff',
                   display: 'flex',
-                  justifyContent: 'space-around',
-                  textAlign: 'center',
+                  flexDirection: 'column',
+                  gap: 3,
                   fontSize: '0.88rem',
                   fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif"
                 }}
               >
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
-                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>
-                    ลงชื่อ..............................................................ครูผู้สอน
-                  </Typography>
-                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#334155', fontWeight: 600 }}>
-                    ({teacher?.TeacherName || teacher?.TeacherNo})
-                  </Typography>
-                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.82rem', color: '#64748b' }}>
-                    วันที่ .......... / .......... / ..............
-                  </Typography>
+                {/* Row 1: 4 Signatures */}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+                    gap: 3,
+                    textAlign: 'center'
+                  }}
+                >
+                  {/* 1. อาจารย์ผู้สอน */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>
+                      ลงชื่อ..............................................................
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                      ({teacher?.TeacherName || teacher?.TeacherNo})
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
+                      อาจารย์ผู้สอน
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.82rem', color: '#64748b' }}>
+                      วันที่ .......... / .......... / ..............
+                    </Typography>
+                  </Box>
+
+                  {/* 2. หัวหน้าหมวด */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>
+                      ลงชื่อ..............................................................
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#334155' }}>
+                      (..............................................................)
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
+                      หัวหน้าหมวด
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.82rem', color: '#64748b' }}>
+                      วันที่ .......... / .......... / ..............
+                    </Typography>
+                  </Box>
+
+                  {/* 3. หัวหน้างานวัดผลและประเมินผลผู้เรียน */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>
+                      ลงชื่อ..............................................................
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#334155' }}>
+                      (..............................................................)
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
+                      หัวหน้างานวัดผลและประเมินผลผู้เรียน
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.82rem', color: '#64748b' }}>
+                      วันที่ .......... / .......... / ..............
+                    </Typography>
+                  </Box>
+
+                  {/* 4. รองผู้อำนวยการฝ่ายวิชาการ */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>
+                      ลงชื่อ..............................................................
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#334155' }}>
+                      (..............................................................)
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
+                      รองผู้อำนวยการฝ่ายวิชาการ
+                    </Typography>
+                    <Typography sx={{ fontFamily: 'inherit', fontSize: '0.82rem', color: '#64748b' }}>
+                      วันที่ .......... / .......... / ..............
+                    </Typography>
+                  </Box>
                 </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
+
+                {/* Row 2: ความเห็นผู้อำนวยการวิทยาลัย Box */}
+                <Box
+                  sx={{
+                    mx: 'auto',
+                    width: { xs: '100%', sm: '380px' },
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '4px',
+                    p: 2,
+                    textAlign: 'center',
+                    bgcolor: '#f8fafc',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.8
+                  }}
+                >
+                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.92rem', fontWeight: 700, color: '#1e293b' }}>
+                    ความเห็นผู้อำนวยการวิทยาลัย
+                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, my: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                      <Box sx={{ width: 14, height: 14, border: '1.5px solid #475569', borderRadius: '2px', bgcolor: '#fff' }} />
+                      <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>อนุมัติ</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                      <Box sx={{ width: 14, height: 14, border: '1.5px solid #475569', borderRadius: '2px', bgcolor: '#fff' }} />
+                      <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>ไม่อนุมัติ</Typography>
+                    </Box>
+                  </Box>
                   <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>
-                    ลงชื่อ..............................................................หัวหน้าแผนกวิชา
+                    ลงชื่อ..............................................................
                   </Typography>
                   <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#334155' }}>
                     (..............................................................)
                   </Typography>
-                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.82rem', color: '#64748b' }}>
-                    วันที่ .......... / .......... / ..............
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
-                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 500 }}>
-                    ลงชื่อ..............................................................หัวหน้างานพัฒนาหลักสูตรฯ
-                  </Typography>
-                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#334155' }}>
-                    (..............................................................)
+                  <Typography sx={{ fontFamily: 'inherit', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                    ผู้อำนวยการวิทยาลัยเทคโนโลยีศรีราชา
                   </Typography>
                   <Typography sx={{ fontFamily: 'inherit', fontSize: '0.82rem', color: '#64748b' }}>
                     วันที่ .......... / .......... / ..............
@@ -1645,29 +1728,87 @@ export default function App() {
                       className="signature-section"
                       style={{
                         display: 'flex',
-                        justifyContent: 'space-around',
+                        flexDirection: 'column',
+                        gap: '8px',
                         textAlign: 'center',
-                        fontSize: '10pt',
-                        marginTop: '16px',
+                        fontSize: '9.5pt',
+                        marginTop: '12px',
                         fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif",
                         pageBreakInside: 'avoid',
                         breakInside: 'avoid'
                       }}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <p style={{ margin: '2px 0', fontSize: '10pt' }}>ลงชื่อ..............................................................ครูผู้สอน</p>
-                        <p style={{ margin: '2px 0', fontSize: '10pt', fontWeight: 600 }}>({teacher?.TeacherName || teacher?.TeacherNo})</p>
-                        <p style={{ margin: '2px 0', fontSize: '9.5pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
+                      {/* Row 1: 4 Signatures Side-by-Side */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(4, 1fr)',
+                          gap: '6px',
+                          textAlign: 'center',
+                          width: '100%'
+                        }}
+                      >
+                        {/* 1. อาจารย์ผู้สอน */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                          <p style={{ margin: '1px 0' }}>ลงชื่อ..............................................................</p>
+                          <p style={{ margin: '1px 0', fontWeight: 600 }}>({teacher?.TeacherName || teacher?.TeacherNo})</p>
+                          <p style={{ margin: '1px 0' }}>อาจารย์ผู้สอน</p>
+                          <p style={{ margin: '1px 0', fontSize: '9pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
+                        </div>
+
+                        {/* 2. หัวหน้าหมวด */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                          <p style={{ margin: '1px 0' }}>ลงชื่อ..............................................................</p>
+                          <p style={{ margin: '1px 0' }}>(..............................................................)</p>
+                          <p style={{ margin: '1px 0' }}>หัวหน้าหมวด</p>
+                          <p style={{ margin: '1px 0', fontSize: '9pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
+                        </div>
+
+                        {/* 3. หัวหน้างานวัดผลและประเมินผลผู้เรียน */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                          <p style={{ margin: '1px 0' }}>ลงชื่อ..............................................................</p>
+                          <p style={{ margin: '1px 0' }}>(..............................................................)</p>
+                          <p style={{ margin: '1px 0' }}>หัวหน้างานวัดผลและประเมินผลผู้เรียน</p>
+                          <p style={{ margin: '1px 0', fontSize: '9pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
+                        </div>
+
+                        {/* 4. รองผู้อำนวยการฝ่ายวิชาการ */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                          <p style={{ margin: '1px 0' }}>ลงชื่อ..............................................................</p>
+                          <p style={{ margin: '1px 0' }}>(..............................................................)</p>
+                          <p style={{ margin: '1px 0' }}>รองผู้อำนวยการฝ่ายวิชาการ</p>
+                          <p style={{ margin: '1px 0', fontSize: '9pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <p style={{ margin: '2px 0', fontSize: '10pt' }}>ลงชื่อ..............................................................หัวหน้าแผนกวิชา</p>
-                        <p style={{ margin: '2px 0', fontSize: '10pt' }}>(..............................................................)</p>
-                        <p style={{ margin: '2px 0', fontSize: '9.5pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <p style={{ margin: '2px 0', fontSize: '10pt' }}>ลงชื่อ..............................................................หัวหน้างานพัฒนาหลักสูตรฯ</p>
-                        <p style={{ margin: '2px 0', fontSize: '10pt' }}>(..............................................................)</p>
-                        <p style={{ margin: '2px 0', fontSize: '9.5pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
+
+                      {/* Row 2: ความเห็นผู้อำนวยการวิทยาลัย Box */}
+                      <div
+                        style={{
+                          margin: '2px auto 0 auto',
+                          width: '320px',
+                          border: '1px solid #000',
+                          padding: '5px 12px',
+                          textAlign: 'center',
+                          fontSize: '9.5pt',
+                          backgroundColor: '#ffffff',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <p style={{ margin: '0 0 3px 0', fontWeight: 'bold' }}>ความเห็นผู้อำนวยการวิทยาลัย</p>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '3px' }}>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '1px solid #000', backgroundColor: '#fff' }}></span>
+                            <span>อนุมัติ</span>
+                          </label>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '1px solid #000', backgroundColor: '#fff' }}></span>
+                            <span>ไม่อนุมัติ</span>
+                          </label>
+                        </div>
+                        <p style={{ margin: '1px 0' }}>ลงชื่อ..............................................................</p>
+                        <p style={{ margin: '1px 0' }}>(..............................................................)</p>
+                        <p style={{ margin: '1px 0', fontWeight: 600 }}>ผู้อำนวยการวิทยาลัยเทคโนโลยีศรีราชา</p>
+                        <p style={{ margin: '1px 0', fontSize: '9pt', color: '#333' }}>วันที่ .......... / .......... / ..............</p>
                       </div>
                     </div>
                   )}
