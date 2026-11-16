@@ -312,12 +312,37 @@ async function getAttendanceSheetData(pool, teacherNo, term, year, subNo, classN
 
     // 2. Query RCL Main (ReportCheckLearnMain)
     const rclQuery = `
-        SELECT RCLNo, DateBegin, DateEnd, AmountWeek, AmountTeachPerWeek, AmountTeachAll, AmountAbsent, TeachWeekDay
+        SELECT RCLNo,
+               CONVERT(VARCHAR(10), DateBegin, 120) AS DateBeginStr,
+               CONVERT(VARCHAR(10), DateEnd, 120) AS DateEndStr,
+               DateBegin, DateEnd, AmountWeek, AmountTeachPerWeek, AmountTeachAll, AmountAbsent, TeachWeekDay
         FROM Vichakarn.dbo.tblReportCheckLearnMain
         WHERE TeacherNo = @teacherNo AND SubNo = @subNo AND ClassNo = @classNo AND TermYear = @termYear
     `;
     const rclResult = await executeSafeQuery(pool, rclQuery, { teacherNo, subNo, classNo, termYear });
-    const rcl = rclResult.recordset[0] || null;
+    let rcl = rclResult.recordset[0] || null;
+
+    // Fallback: If no exact RCL for this teacher, check by SubNo + ClassNo + TermYear or any in TermYear
+    if (!rcl || (!rcl.DateBeginStr && !rcl.DateBegin)) {
+        const fallbackRclResult = await executeSafeQuery(pool, `
+            SELECT TOP 1
+                   CONVERT(VARCHAR(10), DateBegin, 120) AS DateBeginStr,
+                   CONVERT(VARCHAR(10), DateEnd, 120) AS DateEndStr,
+                   DateBegin, DateEnd, AmountWeek, AmountTeachPerWeek, AmountTeachAll, AmountAbsent, TeachWeekDay
+            FROM Vichakarn.dbo.tblReportCheckLearnMain
+            WHERE TermYear = @termYear AND DateBegin IS NOT NULL
+            ORDER BY CASE WHEN SubNo = @subNo AND ClassNo = @classNo THEN 0 ELSE 1 END, RCLNo DESC
+        `, { termYear, subNo, classNo });
+        if (fallbackRclResult.recordset.length > 0) {
+            const fallbackRcl = fallbackRclResult.recordset[0];
+            if (!rcl) {
+                rcl = fallbackRcl;
+            } else {
+                rcl.DateBeginStr = fallbackRcl.DateBeginStr;
+                rcl.DateBegin = fallbackRcl.DateBegin;
+            }
+        }
+    }
 
     // 3. Query RCL Detail
     let rclDetailMap = new Map();
@@ -407,13 +432,13 @@ async function getAttendanceSheetData(pool, teacherNo, term, year, subNo, classN
         contentMap.set(`${c.DateStr}|${c.TimeNo}`, c.Content);
     }
 
-    // Determine starting date
+    // Determine starting date: Prioritize Academic (Vichakarn.dbo.tblReportCheckLearnMain)
     let startDateStr = customDateBegin;
     if (!startDateStr) {
-        if (checkedSessions.length > 0) {
+        if (rcl && (rcl.DateBeginStr || rcl.DateBegin)) {
+            startDateStr = rcl.DateBeginStr || (rcl.DateBegin instanceof Date ? rcl.DateBegin.toISOString().slice(0, 10) : String(rcl.DateBegin).slice(0, 10));
+        } else if (checkedSessions.length > 0) {
             startDateStr = checkedSessions[0].DateStr;
-        } else if (rcl && rcl.DateBegin) {
-            startDateStr = new Date(rcl.DateBegin).toISOString().slice(0, 10);
         } else {
             startDateStr = new Date().toISOString().slice(0, 10);
         }

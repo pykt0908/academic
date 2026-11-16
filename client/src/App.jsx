@@ -373,6 +373,7 @@ export default function App() {
 
   // 4. Update Classrooms on Subject Change
   useEffect(() => {
+    setCustomDateBegin('')
     if (!selectedSubNo) {
       setClassrooms([])
       setSelectedClassNo('')
@@ -386,6 +387,11 @@ export default function App() {
       setMatrixData(null)
     }
   }, [selectedSubNo, subjectsData])
+
+  // Reset custom date when classroom changes
+  useEffect(() => {
+    setCustomDateBegin('')
+  }, [selectedClassNo])
 
   // 5. Auto-Fetch Matrix Sheet when Classroom is selected
   useEffect(() => {
@@ -411,9 +417,6 @@ export default function App() {
       })
       .then(data => {
         setMatrixData(data)
-        if (data?.info?.dateBegin && !customDateBegin) {
-          setCustomDateBegin(data.info.dateBegin)
-        }
       })
       .catch(err => {
         setMatrixError(err.message)
@@ -624,8 +627,9 @@ export default function App() {
   const handleExportExcel = () => {
     if (!selectedYear || !selectedTerm || !selectedSubNo || !selectedClassNo) return
     let url = `/api/teacher/attendance-sheet/export-excel?term=${selectedTerm}&year=${selectedYear}&subNo=${encodeURIComponent(selectedSubNo)}&classNo=${encodeURIComponent(selectedClassNo)}&viewMode=${viewMode}`
-    if (customDateBegin) {
-      url += `&dateBegin=${encodeURIComponent(customDateBegin)}`
+    const activeDateBegin = customDateBegin || matrixData?.info?.dateBegin || ''
+    if (activeDateBegin) {
+      url += `&dateBegin=${encodeURIComponent(activeDateBegin)}`
     }
 
     fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
