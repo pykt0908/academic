@@ -602,7 +602,8 @@ app.get('/api/teacher/attendance-sheet', requireTeacherAuth, async (req, res) =>
 
         // Security check: Verify that THIS teacher teaches this subject & class in this term/year
         const verifyQuery = `
-            SELECT TOP 1 S.Subject,
+            SELECT TOP 1 S.Subject, S.Unit, S.UnitT, S.UnitP,
+                   tl.LavelName, td.DepartNameFull,
                    COALESCE(
                        NULLIF(LTRIM(RTRIM(IsNull(tl.LavelName, '') + ' ' + SUBSTRING(T.ClassNo, 5, 1) + '/' + SUBSTRING(T.ClassNo, 6, CASE WHEN LEN(T.ClassNo) > 5 THEN LEN(T.ClassNo) - 5 ELSE 1 END) + ' ' + IsNull(td.DepartNamefull, ''))), ''),
                        T.ClassNo
@@ -640,6 +641,37 @@ app.get('/api/teacher/attendance-sheet', requireTeacherAuth, async (req, res) =>
 
         const subjectInfo = verifyResult.recordset[0];
 
+        // Query Classroom Advisor (อาจารย์ที่ปรึกษา) from Misschool
+        let advisorName = '';
+        try {
+            const advisorRes1 = await executeSafeQuery(pool, `
+                SELECT TOP 1 IsNull(P.PrefixName,'') + H.Fname + ' ' + H.Lname AS AdvisorName
+                FROM Vichakarn.dbo.tblTeach T
+                JOIN Personal.dbo.tblTeacherHis H ON T.TeacherNo = H.TeacherNo
+                LEFT JOIN Basedata.dbo.tblPrefix P ON H.PrefixNo = P.PrefixNo
+                WHERE (T.LavelNo + T.DepartNo + T.RoundNo + T.Year + T.Room = @classNo)
+                  AND T.SubNo = '00000-0001'
+                ORDER BY CASE WHEN T.sYear = @year AND T.sTerm = @term THEN 0 ELSE 1 END, T.DateEdit DESC
+            `, { classNo, year: String(year), term: String(term) });
+            if (advisorRes1.recordset.length > 0 && advisorRes1.recordset[0].AdvisorName) {
+                advisorName = advisorRes1.recordset[0].AdvisorName;
+            } else {
+                const advisorRes2 = await executeSafeQuery(pool, `
+                    SELECT TOP 1 IsNull(P.PrefixName,'') + H.Fname + ' ' + H.Lname AS AdvisorName
+                    FROM Government.dbo.tblInputStudentInRowByTeacher R
+                    JOIN Personal.dbo.tblTeacherHis H ON R.TeacherNo = H.TeacherNo
+                    LEFT JOIN Basedata.dbo.tblPrefix P ON H.PrefixNo = P.PrefixNo
+                    WHERE R.ClassNo = @classNo
+                    ORDER BY R.DateInput DESC
+                `, { classNo });
+                if (advisorRes2.recordset.length > 0 && advisorRes2.recordset[0].AdvisorName) {
+                    advisorName = advisorRes2.recordset[0].AdvisorName;
+                }
+            }
+        } catch (e) {
+            console.error('Advisor query error:', e);
+        }
+
         const sheetData = await getAttendanceSheetData(
             pool,
             teacherNo,
@@ -649,6 +681,34 @@ app.get('/api/teacher/attendance-sheet', requireTeacherAuth, async (req, res) =>
             classNo,
             dateBegin
         );
+
+        const lavelNo = classNo.length >= 1 ? classNo.substring(0, 1) : '';
+        const departNo = classNo.length >= 3 ? classNo.substring(1, 3) : '';
+        const roundNo = classNo.length >= 4 ? classNo.substring(3, 4) : '';
+        const yearNo = classNo.length >= 5 ? classNo.substring(4, 5) : '';
+        const roomNo = classNo.length >= 6 ? classNo.substring(5) : '';
+
+        const ROUND_NAMES = {
+            '1': 'เช้า',
+            '2': 'ค่ำ',
+            '3': 'เสาร์',
+            '4': 'อาทิตย์',
+            '5': 'เสาร์-อาทิตย์',
+            '6': 'บ่าย',
+            '7': 'ทวิภาคี'
+        };
+        const roundName = ROUND_NAMES[roundNo] || '';
+        const lavelName = subjectInfo.LavelName || (lavelNo === '1' ? 'ปวช.' : 'ปวส.');
+
+        // Depart mapping & Subject type mapping for Cover Page
+        let subType = 'บริหารธุรกิจ';
+        if (['08', '09', '10', '11', '15', '16', '17', '18'].includes(departNo)) {
+            subType = 'อุตสาหกรรม';
+        } else if (['03', '06', '13'].includes(departNo)) {
+            subType = 'อุตสาหกรรมดิจิทัล และเทคโนโลยีสารสนเทศ';
+        } else if (['07'].includes(departNo)) {
+            subType = 'อุตสาหกรรมท่องเที่ยว';
+        }
 
         res.json({
             teacher: {
@@ -661,6 +721,22 @@ app.get('/api/teacher/attendance-sheet', requireTeacherAuth, async (req, res) =>
                 year,
                 subNo,
                 subjectName: subjectInfo.Subject,
+                unit: subjectInfo.Unit !== null && subjectInfo.Unit !== undefined ? subjectInfo.Unit : (sheetData.timetable.length ? Math.round(sheetData.timetable.length / 2) : 2),
+                unitT: subjectInfo.UnitT || 0,
+                unitP: subjectInfo.UnitP || 0,
+                advisorName,
+                lavelNo,
+                lavelName,
+                departNo,
+                departName: subjectInfo.DepartNameFull || '',
+                roundNo,
+                roundName,
+                yearNo,
+                roomNo,
+                subType,
+                totalHours: sheetData.rcl?.AmountTeachAll || sheetData.allColumns.length,
+                hours80: Math.round((sheetData.rcl?.AmountTeachAll || sheetData.allColumns.length) * 0.8),
+                scoreRatio: '80:20',
                 classNo,
                 className: subjectInfo.ClassName,
                 totalStudents: sheetData.students.length,
