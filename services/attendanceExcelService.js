@@ -85,19 +85,51 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     // Weekdays of this month
     const weekdays = getWeekdaysInMonth(yearCE, targetMonthNum);
 
-    // Map attendance: `${stdNo}|${dateStr}` -> status (highest absence priority)
-    const dayStatusMap = new Map();
+    // Group attendance records by student and date to apply daily rule:
+    // "แค่มาแค่คาบเดียว ก็นับว่ามา ('/')" - จะนับ 'ข' ก็ต่อเมื่อไม่ได้มาเรียนเลยในวันนั้น
+    const studentDayPeriods = new Map();
     const checkedDates = new Set();
 
     (attRecords || []).forEach(r => {
         checkedDates.add(r.DateStr);
-        const key = `${String(r.StdNo).trim()}|${r.DateStr}`;
-        const st = r.Status;
-        const current = dayStatusMap.get(key);
-        if (!current || st === 'ข' || (st === 'ล' && current !== 'ข') || (st === 'ป' && current !== 'ข' && current !== 'ล')) {
-            dayStatusMap.set(key, st);
+        const sId = String(r.StdNo).trim();
+        const key = `${sId}|${r.DateStr}`;
+        if (!studentDayPeriods.has(key)) {
+            studentDayPeriods.set(key, []);
         }
+        studentDayPeriods.get(key).push(r.Status);
     });
+
+    function getStudentDayStatus(sId, dateStr) {
+        const key = `${sId}|${dateStr}`;
+        const periods = studentDayPeriods.get(key);
+        if (!periods || periods.length === 0) {
+            // หากวันนั้นโรงเรียนมีการเช็คชื่อ แต่ไม่มีประวัติขาด/ลา ถือว่ามาเรียนปกติ
+            return checkedDates.has(dateStr) ? '/' : '';
+        }
+
+        // เงื่อนไข: แค่มาแค่คาบเดียว (มี 'ม' หรือ '/') ก็นับว่ามาเรียน ('/')
+        const hasPresent = periods.some(st => st === 'ม' || st === '/');
+        if (hasPresent) {
+            return '/';
+        }
+
+        // หากไม่ได้เข้าเรียนเลยสักคาบ:
+        // ตรวจสอบว่ามีขาดเรียน ('ข') หรือไม่
+        if (periods.some(st => st === 'ข')) {
+            return 'ข';
+        }
+
+        // ตรวจสอบว่าเป็นการลาป่วย ('ป') หรือลากิจ ('ล')
+        if (periods.some(st => st === 'ป')) {
+            return 'ป';
+        }
+        if (periods.some(st => st === 'ล')) {
+            return 'ล';
+        }
+
+        return '/';
+    }
 
     // Header Styling
     const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB4C6E7' } }; // Soft periwinkle blue
@@ -251,7 +283,7 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
 
         weekdays.forEach((w, idx) => {
             const cell = r.getCell(dateStartCol + idx);
-            const st = dayStatusMap.get(`${sId}|${w.dateStr}`);
+            const st = getStudentDayStatus(sId, w.dateStr);
             let displayChar = '';
 
             if (st === 'ข') {
@@ -266,11 +298,7 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
                 displayChar = 'ป';
                 leaveCount++;
                 cell.font = { name: 'Sarabun', size: 9, bold: true, color: { argb: 'FFC2410C' } };
-            } else if (st === 'ม' || st === '/') {
-                displayChar = '/';
-                cell.font = { name: 'Sarabun', size: 9, color: { argb: 'FF000000' } };
-            } else if (checkedDates.has(w.dateStr)) {
-                // If this date was checked by school and no absence marked, default to attended
+            } else if (st === '/' || st === 'ม') {
                 displayChar = '/';
                 cell.font = { name: 'Sarabun', size: 9, color: { argb: 'FF000000' } };
             }
