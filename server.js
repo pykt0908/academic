@@ -1325,6 +1325,19 @@ function parseClassInfo(cInfo, cNo, term, year) {
     };
 }
 
+function getShortDepartName(departName) {
+    if (!departName) return '';
+    const d = departName.trim();
+    if (d.includes('บัญชี')) return 'การบัญชี';
+    if (d.includes('ตลาด')) return 'การตลาด';
+    if (d.includes('ดิจิทัล') || d.includes('คอม')) return 'ดิจิทัล';
+    if (d.includes('โลจิส')) return 'โลจิสติกส์';
+    if (d.includes('ยนต์')) return 'ช่างยนต์';
+    if (d.includes('เครื่องกล')) return 'เครื่องกล';
+    if (d.includes('ไฟ')) return 'ไฟฟ้า';
+    return d.substring(0, 10);
+}
+
 function formatSheetTitle(c, targetMonths, mNum) {
     const classNo = c.classNo || c.ClassNo || '';
     const lavelNo = classNo.substring(0, 1);
@@ -1332,6 +1345,7 @@ function formatSheetTitle(c, targetMonths, mNum) {
     const yearNo = classNo.substring(4, 5);
     const roomNo = classNo.substring(5);
     const lName = c.lavelName || c.LavelName || '';
+    const dName = c.departName || c.DepartNamefull || '';
 
     let lavelPrefix = 'ปวช.';
     let isSpecial = false;
@@ -1347,17 +1361,20 @@ function formatSheetTitle(c, targetMonths, mNum) {
         lavelPrefix = 'ปวช.';
     }
 
+    const shortDepart = getShortDepartName(dName);
+
     let title = `${lavelPrefix}${yearNo}_${roomNo}`;
     if (isSpecial) title += '_พิเศษ';
     if (roundNo === '6') title += '_บ่าย';
     else if (roundNo === '2') title += '_ค่ำ';
+    if (shortDepart) title += `_${shortDepart}`;
 
     if (targetMonths && targetMonths.length > 1 && mNum) {
         const mShort = (THAI_MONTHS_FULL[mNum] || '').substring(0, 3);
         title += `_${mShort}`;
     }
 
-    return title.substring(0, 30);
+    return title.substring(0, 31);
 }
 
 async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth, selectedLevel, selectedRound) {
