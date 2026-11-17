@@ -204,21 +204,6 @@ export default function EditorDownload({ onNavigateHome }) {
     }, 1500)
   }
 
-  // Label for active month
-  const activeMonthLabel = selectedMonth !== 'all'
-    ? (THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label || selectedMonth)
-    : 'ตลอดภาคเรียน'
-
-  // Label for active round
-  const activeRoundLabel = selectedRound !== 'all'
-    ? (ROUND_OPTIONS.find(r => r.value === selectedRound)?.label || selectedRound)
-    : 'ทุกรอบ'
-
-  // Label for active target
-  const activeTargetLabel = selectedClass === 'all'
-    ? `ทุกห้องเรียน (${filteredClassList.length} ห้อง)`
-    : (classes.find(c => c.ClassNo === selectedClass)?.ClassName || selectedClass)
-
   return (
     <ThemeProvider theme={muiTheme}>
       <div className="min-h-screen bg-slate-100 flex flex-col text-slate-800" style={{ fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif" }}>
@@ -390,35 +375,6 @@ export default function EditorDownload({ onNavigateHome }) {
                   ))}
                 </Select>
               </FormControl>
-
-              {/* Summary Box */}
-              <Box
-                sx={{
-                  bgcolor: '#f8fafc',
-                  p: 2,
-                  borderRadius: 1.5,
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  alignItems: { xs: 'flex-start', sm: 'center' },
-                  justifyContent: 'space-between',
-                  gap: 1
-                }}
-              >
-                <Box sx={{ fontSize: '0.85rem', color: '#475569' }}>
-                  <span style={{ fontWeight: 700, color: '#0f172a' }}>เงื่อนไข: </span>
-                  <span>{activeTargetLabel}</span>
-                  <span style={{ margin: '0 6px', color: '#94a3b8' }}>•</span>
-                  <span>{activeRoundLabel}</span>
-                  <span style={{ margin: '0 6px', color: '#94a3b8' }}>•</span>
-                  <span>เดือน{activeMonthLabel}</span>
-                  <span style={{ margin: '0 6px', color: '#94a3b8' }}>•</span>
-                  <span>ภาคเรียนที่ {term}/{year}</span>
-                </Box>
-                <Box sx={{ fontSize: '0.78rem', color: '#94a3b8', fontFamily: 'monospace' }}>
-                  ฟอร์ม A4 แนวนอน
-                </Box>
-              </Box>
 
               {/* Download Button */}
               <MuiButton
