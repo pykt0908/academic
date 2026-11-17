@@ -2,31 +2,42 @@ import React, { useState, useEffect, useMemo } from 'react'
 import {
   FileSpreadsheet,
   Download,
-  Search,
-  Filter,
   ArrowLeft,
-  Users,
-  Building2,
-  CalendarCheck,
-  GraduationCap,
-  Sparkles,
+  Calendar,
+  Layers,
+  School,
   Loader2,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react'
 
+const THAI_MONTH_OPTIONS = [
+  { value: 'all', label: 'ทุกเดือน (ตลอดภาคเรียน)' },
+  { value: '5', label: 'พฤษภาคม' },
+  { value: '6', label: 'มิถุนายน' },
+  { value: '7', label: 'กรกฎาคม' },
+  { value: '8', label: 'สิงหาคม' },
+  { value: '9', label: 'กันยายน' },
+  { value: '10', label: 'ตุลาคม' },
+  { value: '11', label: 'พฤศจิกายน' },
+  { value: '12', label: 'ธันวาคม' },
+  { value: '1', label: 'มกราคม' },
+  { value: '2', label: 'กุมภาพันธ์' },
+  { value: '3', label: 'มีนาคม' },
+  { value: '4', label: 'เมษายน' }
+]
+
 export default function EditorDownload({ onNavigateHome }) {
   const [term, setTerm] = useState('2')
   const [year, setYear] = useState('2569')
   const [selectedMonth, setSelectedMonth] = useState('all')
+  const [selectedLevel, setSelectedLevel] = useState('all') // 'all', 'ปวช.', 'ปวส.'
+  const [selectedClass, setSelectedClass] = useState('all') // 'all' or classNo
   const [termsList, setTermsList] = useState([])
   const [classes, setClasses] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedLevel, setSelectedLevel] = useState('all') // 'all', 'ปวช.', 'ปวส.'
-  const [downloadingClass, setDownloadingClass] = useState(null)
-  const [downloadingAll, setDownloadingAll] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
 
   // Fetch available terms
@@ -39,7 +50,6 @@ export default function EditorDownload({ onNavigateHome }) {
         }
       })
       .catch(() => {
-        // Fallback default terms
         setTermsList([
           { Year: '2569', Term: '2' },
           { Year: '2569', Term: '1' },
@@ -50,10 +60,10 @@ export default function EditorDownload({ onNavigateHome }) {
   }, [])
 
   // Fetch classrooms for selected term/year
-  const fetchClasses = (t, y) => {
+  useEffect(() => {
     setLoading(true)
     setError('')
-    fetch(`/api/editor-download/classes?term=${t}&year=${y}`)
+    fetch(`/api/editor-download/classes?term=${term}&year=${year}`)
       .then(res => {
         if (!res.ok) throw new Error('ไม่สามารถโหลดรายชื่อห้องเรียนได้')
         return res.json()
@@ -66,136 +76,96 @@ export default function EditorDownload({ onNavigateHome }) {
         setError(err.message)
         setLoading(false)
       })
-  }
-
-  useEffect(() => {
-    fetchClasses(term, year)
   }, [term, year])
 
-  // Filtered classes
-  const filteredClasses = useMemo(() => {
+  // Filtered class list by level
+  const filteredClassList = useMemo(() => {
+    if (selectedLevel === 'all') return classes
     return classes.filter(c => {
-      const q = searchQuery.toLowerCase().trim()
-      const matchSearch = !q ||
-        (c.className && c.className.toLowerCase().includes(q)) ||
-        (c.classNo && c.classNo.toLowerCase().includes(q)) ||
-        (c.DepartNamefull && c.DepartNamefull.toLowerCase().includes(q))
-
-      const matchLevel = selectedLevel === 'all' ||
-        (selectedLevel === 'ปวช.' && c.LavelName && c.LavelName.includes('ปวช')) ||
-        (selectedLevel === 'ปวส.' && c.LavelName && c.LavelName.includes('ปวส'))
-
-      return matchSearch && matchLevel
+      if (selectedLevel === 'ปวช.') return c.LavelName?.includes('ปวช')
+      if (selectedLevel === 'ปวส.') return c.LavelName?.includes('ปวส')
+      return true
     })
-  }, [classes, searchQuery, selectedLevel])
+  }, [classes, selectedLevel])
 
-  // Aggregate stats
-  const totalStudents = useMemo(() => {
-    return classes.reduce((sum, c) => sum + (c.StudentCount || 0), 0)
-  }, [classes])
+  // Reset selectedClass to 'all' if selectedClass is not in the filtered list
+  useEffect(() => {
+    if (selectedClass !== 'all' && !filteredClassList.some(c => c.ClassNo === selectedClass)) {
+      setSelectedClass('all')
+    }
+  }, [filteredClassList, selectedClass])
 
-  const totalPeriods = useMemo(() => {
-    return classes.reduce((sum, c) => sum + (c.PeriodsChecked || 0), 0)
-  }, [classes])
-
-  const THAI_MONTH_OPTIONS = [
-    { value: 'all', label: 'ทุกเดือน (ตลอดภาคเรียน)' },
-    { value: '5', label: 'พฤษภาคม (5)' },
-    { value: '6', label: 'มิถุนายน (6)' },
-    { value: '7', label: 'กรกฎาคม (7)' },
-    { value: '8', label: 'สิงหาคม (8)' },
-    { value: '9', label: 'กันยายน (9)' },
-    { value: '10', label: 'ตุลาคม (10)' },
-    { value: '11', label: 'พฤศจิกายน (11)' },
-    { value: '12', label: 'ธันวาคม (12)' },
-    { value: '1', label: 'มกราคม (1)' },
-    { value: '2', label: 'กุมภาพันธ์ (2)' },
-    { value: '3', label: 'มีนาคม (3)' },
-    { value: '4', label: 'เมษายน (4)' }
-  ]
-
-  // Download Single Classroom Excel
-  const handleDownloadClass = (classNo, className) => {
-    setDownloadingClass(classNo)
+  // Download Action
+  const handleDownload = () => {
+    setDownloading(true)
+    setError('')
     setSuccessMsg('')
+
     const monthParam = selectedMonth !== 'all' ? `&month=${selectedMonth}` : ''
-    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(classNo)}${monthParam}`
-    
-    // Create invisible anchor to download
+    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(selectedClass)}${monthParam}`
+
     const link = document.createElement('a')
     link.href = url
     const monthSuffix = selectedMonth !== 'all' ? `_เดือน${selectedMonth}` : ''
-    link.setAttribute('download', `สถิติขาดเรียน_${classNo}_${term}_${year}${monthSuffix}.xlsx`)
+    const targetLabel = selectedClass === 'all' ? 'ทุกห้อง' : selectedClass
+    link.setAttribute('download', `สถิติขาดเรียน_${targetLabel}_${term}_${year}${monthSuffix}.xlsx`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
 
     setTimeout(() => {
-      setDownloadingClass(null)
-      const mText = selectedMonth !== 'all' ? ` (เดือน ${THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label || selectedMonth})` : ''
-      setSuccessMsg(`ดาวน์โหลดไฟล์ของ ${className}${mText} เรียบร้อยแล้ว`)
-      setTimeout(() => setSuccessMsg(''), 4000)
-    }, 1200)
-  }
-
-  // Download All Classrooms in One Excel
-  const handleDownloadAll = () => {
-    setDownloadingAll(true)
-    setSuccessMsg('')
-    const monthParam = selectedMonth !== 'all' ? `&month=${selectedMonth}` : ''
-    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=all${monthParam}`
-
-    const link = document.createElement('a')
-    link.href = url
-    const monthSuffix = selectedMonth !== 'all' ? `_เดือน${selectedMonth}` : ''
-    link.setAttribute('download', `สถิติขาดเรียน_ทุกห้อง_${term}_${year}${monthSuffix}.xlsx`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    setTimeout(() => {
-      setDownloadingAll(false)
-      const mText = selectedMonth !== 'all' ? ` (เดือน ${THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label || selectedMonth})` : ''
-      setSuccessMsg(`ดาวน์โหลดไฟล์รวมทุกห้องเรียน (${classes.length} ห้อง)${mText} เรียบร้อยแล้ว`)
+      setDownloading(false)
+      const mLabel = selectedMonth !== 'all' ? THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label : 'ตลอดภาคเรียน'
+      const cLabel = selectedClass === 'all'
+        ? `ทุกห้องเรียน (${filteredClassList.length} ห้อง)`
+        : (classes.find(c => c.ClassNo === selectedClass)?.ClassName || selectedClass)
+      setSuccessMsg(`ดาวน์โหลดไฟล์ Excel ของ ${cLabel} (${mLabel}) เรียบร้อยแล้ว`)
       setTimeout(() => setSuccessMsg(''), 5000)
-    }, 2000)
+    }, 1500)
   }
+
+  // Label for active month
+  const activeMonthLabel = selectedMonth !== 'all'
+    ? (THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label || selectedMonth)
+    : 'ตลอดภาคเรียน'
+
+  // Label for active target
+  const activeTargetLabel = selectedClass === 'all'
+    ? `ทุกห้องเรียน (${filteredClassList.length} ห้อง)`
+    : (classes.find(c => c.ClassNo === selectedClass)?.ClassName || selectedClass)
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif" }}>
-      {/* Top Header Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-800" style={{ fontFamily: "'Sarabun', 'TH Sarabun New', sans-serif" }}>
+      {/* Top Header */}
+      <header className="bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/img/logo.png" alt="ตราวิทยาลัย" className="w-10 h-10 object-contain" />
+            <img src="/img/logo.png" alt="ตราวิทยาลัย" className="w-9 h-9 object-contain" />
             <div>
-              <div className="text-base sm:text-lg font-bold text-slate-900 leading-tight flex items-center gap-2">
-                <span>วิทยาลัยเทคโนโลยีศรีราชา</span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-sm">
-                  Excel Export
-                </span>
+              <div className="text-base font-bold text-slate-900 leading-tight">
+                วิทยาลัยเทคโนโลยีศรีราชา
               </div>
-              <div className="text-xs sm:text-sm text-slate-500 font-medium">
-                ระบบดาวน์โหลดสถิติเวลาเรียนรายเดือน (แยกห้องเรียนแบบละเอียด)
+              <div className="text-xs text-slate-500 font-medium">
+                ระบบดาวน์โหลดสถิติเวลาเรียน (Excel)
               </div>
             </div>
           </div>
 
           <button
             onClick={onNavigateHome}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>กลับหน้ารายงานเวลาเรียน</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>กลับหน้ารายงาน</span>
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Main Centered Content */}
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 flex flex-col justify-center">
         {/* Success Alert */}
         {successMsg && (
-          <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 flex items-center gap-3 shadow-xs">
+          <div className="mb-4 p-4 bg-emerald-50 border border-emerald-300 text-emerald-800 flex items-center gap-3 shadow-xs">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <span className="text-sm font-semibold">{successMsg}</span>
           </div>
@@ -203,255 +173,160 @@ export default function EditorDownload({ onNavigateHome }) {
 
         {/* Error Alert */}
         {error && (
-          <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-800 flex items-center gap-3 shadow-xs">
+          <div className="mb-4 p-4 bg-red-50 border border-red-300 text-red-800 flex items-center gap-3 shadow-xs">
             <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
             <span className="text-sm font-semibold">{error}</span>
           </div>
         )}
 
-        {/* Hero Section with Quick Stats & Big Download Button */}
-        <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 text-white p-6 sm:p-8 shadow-md border border-slate-800 relative overflow-hidden">
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="max-w-2xl space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Monthly Attendance Exporter</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                ส่งออกสถิติเวลาเรียน (มา/ขาด/ลา/ป่วย) เป็น Excel
-              </h1>
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-                ดาวน์โหลดแบบฟอร์มสถิติการขาดเรียนของนักศึกษา (งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา) แยกเป็นห้องแบบละเอียด พร้อมเลือกประจำเดือนได้ตามต้องการ
-              </p>
+        {/* Download Filter Card */}
+        <div className="bg-white border border-slate-300 shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="border-b border-slate-200 pb-4">
+            <div className="flex items-center gap-2 text-emerald-700 font-bold text-lg">
+              <FileSpreadsheet className="w-6 h-6 text-emerald-600" />
+              <span>ส่งออกสถิติการขาดเรียน (Excel)</span>
             </div>
-
-            {/* Big Action Button */}
-            <div className="shrink-0 flex flex-col items-start lg:items-end gap-2">
-              <button
-                onClick={handleDownloadAll}
-                disabled={downloadingAll || loading || classes.length === 0}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 text-base font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {downloadingAll ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>กำลังสร้างไฟล์ Excel...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5" />
-                    <span>ดาวน์โหลดรวมทุกห้องเรียน (.xlsx)</span>
-                  </>
-                )}
-              </button>
-              <span className="text-xs text-slate-400">
-                * รวมแบบฟอร์มสถิติการขาดเรียนทุกห้องเรียน ({classes.length} ห้อง) {selectedMonth !== 'all' ? `ประจำเดือน ${THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label}` : 'ตลอดภาคเรียน'}
-              </span>
-            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              แบบฟอร์มสถิติการขาดเรียนของนักศึกษา (งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา)
+            </p>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
-            <div className="flex items-center gap-3 bg-white/5 p-3 rounded-none border border-white/10">
-              <Building2 className="w-8 h-8 text-blue-400 shrink-0" />
+          {/* Filter Form Controls */}
+          <div className="space-y-4">
+            {/* Row 1: Term & Year */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <div className="text-xs text-slate-400 font-medium">ห้องเรียนที่มีข้อมูล</div>
-                <div className="text-xl font-bold text-white">{classes.length} <span className="text-xs font-normal text-slate-400">ห้อง</span></div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>ภาคเรียน</span>
+                </label>
+                <select
+                  value={term}
+                  onChange={e => setTerm(e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-semibold bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                >
+                  <option value="1">ภาคเรียนที่ 1</option>
+                  <option value="2">ภาคเรียนที่ 2</option>
+                  <option value="3">ภาคเรียนที่ 3 (ฤดูร้อน)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>ปีการศึกษา</span>
+                </label>
+                <select
+                  value={year}
+                  onChange={e => setYear(e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-semibold bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                >
+                  {Array.from(new Set(termsList.map(t => t.Year || t.year))).filter(Boolean).map(y => (
+                    <option key={y} value={y}>พ.ศ. {y}</option>
+                  ))}
+                  {!termsList.some(t => (t.Year || t.year) === '2569') && <option value="2569">พ.ศ. 2569</option>}
+                  {!termsList.some(t => (t.Year || t.year) === '2568') && <option value="2568">พ.ศ. 2568</option>}
+                </select>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-white/5 p-3 rounded-none border border-white/10">
-              <Users className="w-8 h-8 text-emerald-400 shrink-0" />
+            {/* Row 2: Month & Level */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <div className="text-xs text-slate-400 font-medium">นักศึกษาในระบบ</div>
-                <div className="text-xl font-bold text-white">{totalStudents.toLocaleString()} <span className="text-xs font-normal text-slate-400">คน</span></div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>ประจำเดือน</span>
+                </label>
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-semibold bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                >
+                  {THAI_MONTH_OPTIONS.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-slate-400" />
+                  <span>ระดับชั้น</span>
+                </label>
+                <select
+                  value={selectedLevel}
+                  onChange={e => setSelectedLevel(e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-semibold bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                >
+                  <option value="all">ทั้งหมด (ปวช. และ ปวส.)</option>
+                  <option value="ปวช.">ระดับ ปวช.</option>
+                  <option value="ปวส.">ระดับ ปวส.</option>
+                </select>
               </div>
             </div>
 
-            <div className="col-span-2 sm:col-span-1 flex items-center gap-3 bg-white/5 p-3 rounded-none border border-white/10">
-              <CalendarCheck className="w-8 h-8 text-amber-400 shrink-0" />
-              <div>
-                <div className="text-xs text-slate-400 font-medium">คาบเรียนที่เช็คชื่อแล้ว</div>
-                <div className="text-xl font-bold text-white">{totalPeriods.toLocaleString()} <span className="text-xs font-normal text-slate-400">คาบ</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filter and Search Bar */}
-        <div className="bg-white p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Term Selector */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-slate-600 uppercase">ภาคเรียน:</label>
+            {/* Row 3: Classroom Selector */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <School className="w-3.5 h-3.5 text-slate-400" />
+                  <span>ห้องเรียนที่ต้องการดาวน์โหลด</span>
+                </span>
+                {loading && <span className="text-xs text-blue-600 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> กำลังโหลด...</span>}
+              </label>
               <select
-                value={term}
-                onChange={e => setTerm(e.target.value)}
-                className="px-3 py-1.5 text-sm font-semibold bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                value={selectedClass}
+                onChange={e => setSelectedClass(e.target.value)}
+                disabled={loading}
+                className="w-full px-3 py-2 text-sm font-semibold bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer disabled:opacity-50"
               >
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3 (ฤดูร้อน)</option>
-              </select>
-            </div>
-
-            {/* Year Selector */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-slate-600 uppercase">ปีการศึกษา:</label>
-              <select
-                value={year}
-                onChange={e => setYear(e.target.value)}
-                className="px-3 py-1.5 text-sm font-semibold bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              >
-                {Array.from(new Set(termsList.map(t => t.Year || t.year))).filter(Boolean).map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-                {!termsList.some(t => (t.Year || t.year) === '2569') && <option value="2569">2569</option>}
-                {!termsList.some(t => (t.Year || t.year) === '2568') && <option value="2568">2568</option>}
-              </select>
-            </div>
-
-            {/* Month Selector */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-blue-900 uppercase">ประจำเดือน:</label>
-              <select
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(e.target.value)}
-                className="px-3 py-1.5 text-sm font-bold bg-blue-50 border border-blue-300 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              >
-                {THAI_MONTH_OPTIONS.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
+                <option value="all">
+                  📁 ทุกห้องเรียน ({filteredClassList.length} ห้อง - รวมในไฟล์เดียว)
+                </option>
+                {filteredClassList.map(c => (
+                  <option key={c.ClassNo} value={c.ClassNo}>
+                    {c.ClassName || c.ClassNo} ({c.StudentCount || 0} คน)
+                  </option>
                 ))}
               </select>
             </div>
+          </div>
 
-            {/* Level Filter Tabs */}
-            <div className="flex items-center border border-slate-300 bg-slate-100 p-0.5 ml-0 sm:ml-2">
-              <button
-                onClick={() => setSelectedLevel('all')}
-                className={`px-3 py-1 text-xs font-bold transition-colors cursor-pointer ${selectedLevel === 'all' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                ทั้งหมด ({classes.length})
-              </button>
-              <button
-                onClick={() => setSelectedLevel('ปวช.')}
-                className={`px-3 py-1 text-xs font-bold transition-colors cursor-pointer ${selectedLevel === 'ปวช.' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                ปวช.
-              </button>
-              <button
-                onClick={() => setSelectedLevel('ปวส.')}
-                className={`px-3 py-1 text-xs font-bold transition-colors cursor-pointer ${selectedLevel === 'ปวส.' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                ปวส.
-              </button>
+          {/* Selection Summary Pill */}
+          <div className="bg-slate-50 p-3.5 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span className="font-bold text-slate-800">เงื่อนไข: </span>
+              <span>{activeTargetLabel}</span>
+              <span className="mx-1 text-slate-400">•</span>
+              <span>เดือน{activeMonthLabel}</span>
+              <span className="mx-1 text-slate-400">•</span>
+              <span>ภาคเรียนที่ {term}/{year}</span>
+            </div>
+            <div className="text-slate-400 font-mono text-[11px]">
+              ฟอร์ม A4 แนวนอน
             </div>
           </div>
 
-          {/* Search Input */}
-          <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาชื่อห้องเรียน หรือ สาขาวิชา..."
-              className="w-full pl-9 pr-3 py-1.5 text-sm bg-slate-50 border border-slate-300 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          {/* Download Action Button */}
+          <div>
+            <button
+              onClick={handleDownload}
+              disabled={downloading || loading || (selectedClass === 'all' && filteredClassList.length === 0)}
+              className="w-full py-3.5 px-6 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-base transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>กำลังสร้างไฟล์ Excel...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  <span>ดาวน์โหลดไฟล์ Excel (.xlsx)</span>
+                </>
+              )}
+            </button>
           </div>
-        </div>
-
-        {/* Classrooms List Table */}
-        <div className="bg-white border border-slate-200 shadow-xs overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-            <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-base font-bold text-slate-800">
-                รายการห้องเรียนสำหรับส่งออกสถิติ (พบ {filteredClasses.length} ห้อง)
-              </h2>
-            </div>
-            <span className="text-xs text-slate-500">
-              * แบบฟอร์มสถิติการขาดเรียน (งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา) ตามระเบียบวิทยาลัย
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="p-12 text-center text-slate-500 space-y-3">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
-              <div className="text-sm font-semibold">กำลังดึงข้อมูลห้องเรียนจากฐานข้อมูล...</div>
-            </div>
-          ) : filteredClasses.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 space-y-2">
-              <AlertCircle className="w-8 h-8 mx-auto text-slate-400" />
-              <div className="text-base font-semibold text-slate-700">ไม่พบห้องเรียนที่ตรงกับเงื่อนไข</div>
-              <div className="text-xs text-slate-400">โปรดลองเปลี่ยนคำค้นหา หรือเลือกภาคเรียน/ปีการศึกษาอื่น</div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
-                    <th className="py-3 px-4 text-center w-12">ลำดับ</th>
-                    <th className="py-3 px-4 w-28">รหัสห้อง</th>
-                    <th className="py-3 px-4">ชื่อห้องเรียน</th>
-                    <th className="py-3 px-4 w-32">ระดับชั้น</th>
-                    <th className="py-3 px-4">สาขาวิชา</th>
-                    <th className="py-3 px-4 text-center w-28">จำนวนนักศึกษา</th>
-                    <th className="py-3 px-4 text-center w-28">วันที่เช็คชื่อ</th>
-                    <th className="py-3 px-4 text-center w-28">คาบที่เช็ค</th>
-                    <th className="py-3 px-4 text-center w-36">การดำเนินการ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-sm">
-                  {filteredClasses.map((c, idx) => {
-                    const isDownloadingThis = downloadingClass === c.ClassNo
-                    return (
-                      <tr key={c.ClassNo} className="hover:bg-blue-50/50 transition-colors">
-                        <td className="py-3 px-4 text-center text-slate-500 font-semibold">{idx + 1}</td>
-                        <td className="py-3 px-4 font-mono text-xs font-bold text-slate-600">{c.ClassNo}</td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{c.ClassName}</td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-xs ${c.LavelName?.includes('ปวส') ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                            {c.LavelName || 'ปวช.'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-slate-600">{c.DepartNamefull || '-'}</td>
-                        <td className="py-3 px-4 text-center font-semibold text-slate-800">
-                          {c.StudentCount || 0} คน
-                        </td>
-                        <td className="py-3 px-4 text-center text-slate-600">
-                          {c.DaysChecked || 0} วัน
-                        </td>
-                        <td className="py-3 px-4 text-center text-slate-600 font-mono">
-                          {c.PeriodsChecked || 0}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <button
-                            onClick={() => handleDownloadClass(c.ClassNo, c.ClassName)}
-                            disabled={isDownloadingThis}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer disabled:opacity-50"
-                            title={`ดาวน์โหลดสถิติ Excel ของ ${c.ClassName}`}
-                          >
-                            {isDownloadingThis ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>กำลังสร้าง...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Download className="w-3.5 h-3.5" />
-                                <span>ดาวน์โหลด Excel</span>
-                              </>
-                            )}
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       </main>
     </div>
