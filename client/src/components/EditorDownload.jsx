@@ -82,11 +82,9 @@ const THAI_MONTH_OPTIONS = [
 ]
 
 const ROUND_OPTIONS = [
-  { value: 'all', label: 'ทุกรอบ (เช้า / บ่าย / ทวิภาคี)' },
+  { value: 'all', label: 'ทุกรอบ (เช้า / บ่าย)' },
   { value: '1', label: 'รอบเช้า' },
-  { value: '6', label: 'รอบบ่าย' },
-  { value: '7', label: 'รอบทวิภาคี' },
-  { value: '2', label: 'รอบค่ำ' }
+  { value: '6', label: 'รอบบ่าย' }
 ]
 
 export default function EditorDownload({ onNavigateHome }) {
@@ -149,9 +147,10 @@ export default function EditorDownload({ onNavigateHome }) {
         (selectedLevel === 'ปวช.' && (c.ClassNo?.startsWith('1') || c.LavelName?.includes('ปวช'))) ||
         (selectedLevel === 'ปวส.' && (!c.ClassNo?.startsWith('1') || c.LavelName?.includes('ปวส')))
 
-      // Round filter
+      // Round filter (รอบเช้า '1' รวมทวิภาคี '7' ด้วย)
       const cRound = c.ClassNo?.substring(3, 4)
-      const matchRound = selectedRound === 'all' || cRound === selectedRound
+      const matchRound = selectedRound === 'all' ||
+        (selectedRound === '1' ? (cRound === '1' || cRound === '7') : cRound === selectedRound)
 
       return matchLevel && matchRound
     })

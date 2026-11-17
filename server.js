@@ -1297,7 +1297,7 @@ const ROUND_MAP = {
     '1': 'เช้า',
     '2': 'ค่ำ',
     '6': 'บ่าย',
-    '7': 'ทวิภาคี'
+    '7': 'เช้า'
 };
 
 function parseClassInfo(cInfo, cNo, term, year) {
@@ -1350,7 +1350,6 @@ function formatSheetTitle(c, targetMonths, mNum) {
     let title = `${lavelPrefix}${yearNo}_${roomNo}`;
     if (isSpecial) title += '_พิเศษ';
     if (roundNo === '6') title += '_บ่าย';
-    else if (roundNo === '7') title += '_ทวิ';
     else if (roundNo === '2') title += '_ค่ำ';
 
     if (targetMonths && targetMonths.length > 1 && mNum) {
@@ -1456,9 +1455,16 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             }
         }
 
-        // Filter by round if specified
+        // Filter by round if specified (รอบเช้า '1' รวมทวิภาคี '7' ด้วย)
         if (selectedRound && selectedRound !== 'all') {
-            rooms = rooms.filter(r => r.ClassNo.substring(3, 4) === String(selectedRound));
+            if (String(selectedRound) === '1') {
+                rooms = rooms.filter(r => {
+                    const rnd = r.ClassNo.substring(3, 4);
+                    return rnd === '1' || rnd === '7';
+                });
+            } else {
+                rooms = rooms.filter(r => r.ClassNo.substring(3, 4) === String(selectedRound));
+            }
         }
 
         // Sort rooms in sequential classroom order:
@@ -1554,7 +1560,7 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             });
         });
 
-        const roundSuffixMap = { '1': '_รอบเช้า', '6': '_รอบบ่าย', '7': '_รอบทวิภาคี', '2': '_รอบค่ำ' };
+        const roundSuffixMap = { '1': '_รอบเช้า', '6': '_รอบบ่าย', '7': '_รอบเช้า', '2': '_รอบค่ำ' };
         const roundSuffix = selectedRound && selectedRound !== 'all' ? (roundSuffixMap[selectedRound] || `_รอบ${selectedRound}`) : '';
         const levelSuffix = (selectedLevel && selectedLevel !== 'all') ? `_${selectedLevel.replace(/[\/\\:*?"<>|.]/g, '')}` : '';
         const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
