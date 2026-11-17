@@ -859,28 +859,6 @@ export default function App() {
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => {
-                    window.history.pushState({}, '', '/editor-download')
-                    setCurrentPath('/editor-download')
-                  }}
-                  startIcon={<FileDownloadIcon fontSize="small" />}
-                  sx={{
-                    borderRadius: 0,
-                    bgcolor: '#16a34a',
-                    color: '#ffffff',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    boxShadow: 'none',
-                    px: 1.8,
-                    '&:hover': { bgcolor: '#15803d', boxShadow: 'none' }
-                  }}
-                >
-                  ส่งออกสถิติ Excel
-                </Button>
-
                 <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
                   <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
                     {teacher?.TeacherName || teacher?.TeacherNo}
