@@ -168,7 +168,8 @@ export default function EditorDownload({ onNavigateHome }) {
     setSuccessMsg('')
 
     const monthParam = selectedMonth !== 'all' ? `&month=${selectedMonth}` : ''
-    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(selectedClass)}${monthParam}`
+    const levelParam = selectedLevel !== 'all' ? `&level=${encodeURIComponent(selectedLevel)}` : ''
+    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(selectedClass)}${monthParam}${levelParam}`
 
     const link = document.createElement('a')
     link.href = url

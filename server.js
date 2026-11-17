@@ -1324,7 +1324,7 @@ function parseClassInfo(cInfo, cNo, term, year) {
     };
 }
 
-async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth) {
+async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth, selectedLevel) {
     const termYear = `${term}/${year}`;
     const wb = new ExcelJS.Workbook();
     wb.creator = 'วิทยาลัยเทคโนโลยีศรีราชา';
@@ -1389,9 +1389,14 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
         }
 
+        const yearNo = classNo.substring(4, 5);
+        const roomNo = classNo.substring(5);
+        const baseTitle = `${yearNo}_${roomNo}`;
+
         targetMonths.forEach(mNum => {
             const mLabel = THAI_MONTHS_FULL[mNum] || `เดือน ${mNum}`;
-            buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, mLabel);
+            const sheetTitle = targetMonths.length === 1 ? baseTitle : `${baseTitle}_${mLabel}`;
+            buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle);
         });
 
         const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
@@ -1406,8 +1411,38 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             LEFT JOIN Basedata.dbo.tblLavel tl ON tl.LavelNo = SUBSTRING(CM.ClassNo, 1, 1)
             LEFT JOIN Basedata.dbo.tblDepart td ON td.DepartNo = SUBSTRING(CM.ClassNo, 2, 2)
             WHERE CM.TermYear = @termYear
-            ORDER BY CM.ClassNo
         `, { termYear });
+
+        let rooms = qRooms.recordset;
+
+        // Filter by level if specified
+        if (selectedLevel && selectedLevel !== 'all') {
+            if (selectedLevel === 'ปวช.' || selectedLevel.includes('ปวช')) {
+                rooms = rooms.filter(r => r.ClassNo.startsWith('1') || r.LavelName?.includes('ปวช'));
+            } else if (selectedLevel === 'ปวส.' || selectedLevel.includes('ปวส')) {
+                rooms = rooms.filter(r => !r.ClassNo.startsWith('1') || r.LavelName?.includes('ปวส'));
+            }
+        }
+
+        // Sort rooms in sequential classroom order:
+        // 1. Level (ปวช. before ปวส.)
+        // 2. Year (1, then 2, then 3)
+        // 3. Room (1, 2, 3, 4, 5, 6...)
+        rooms.sort((a, b) => {
+            const aLavel = a.ClassNo[0];
+            const bLavel = b.ClassNo[0];
+            if (aLavel !== bLavel) return aLavel.localeCompare(bLavel);
+
+            const aYear = parseInt(a.ClassNo.substring(4, 5)) || 0;
+            const bYear = parseInt(b.ClassNo.substring(4, 5)) || 0;
+            if (aYear !== bYear) return aYear - bYear;
+
+            const aRoom = parseInt(a.ClassNo.substring(5)) || 0;
+            const bRoom = parseInt(b.ClassNo.substring(5)) || 0;
+            if (aRoom !== bRoom) return aRoom - bRoom;
+
+            return a.ClassNo.localeCompare(b.ClassNo);
+        });
 
         const attRes = await executeSafeQuery(pool, `
             SELECT 
@@ -1460,7 +1495,9 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
         }
 
-        qRooms.recordset.forEach(c => {
+        const hasMultipleLevels = new Set(rooms.map(r => r.ClassNo[0])).size > 1;
+
+        rooms.forEach(c => {
             const parsedInfo = parseClassInfo(c, c.ClassNo, term, year);
             const classAtt = attByClass.get(c.ClassNo) || [];
             const classStds = stdByClass.get(c.ClassNo) || [];
@@ -1471,17 +1508,23 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
                 attRecords: classAtt
             };
 
+            const yearNo = c.ClassNo.substring(4, 5);
+            const roomNo = c.ClassNo.substring(5);
+            const baseTitle = hasMultipleLevels
+                ? `${parsedInfo.levelClass.replace(/[\/\\:*?"<>|]/g, '_')}` // e.g. ปวช.1_1
+                : `${yearNo}_${roomNo}`; // e.g. 1_1, 1_2
+
             targetMonths.forEach(mNum => {
-                const safeLevel = (parsedInfo.levelClass || c.ClassNo).replace(/[\/\\:*?"<>|]/g, '_');
                 const sheetTitle = targetMonths.length === 1 
-                    ? safeLevel
-                    : `${safeLevel}_${(THAI_MONTHS_FULL[mNum] || '').substring(0, 3)}`;
+                    ? baseTitle
+                    : `${baseTitle}_${(THAI_MONTHS_FULL[mNum] || '').substring(0, 3)}`;
                 buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle);
             });
         });
 
         const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
-        const filename = `สถิติขาดเรียน_ทุกห้อง${monthSuffix}_${term}_${year}.xlsx`;
+        const levelSuffix = (selectedLevel && selectedLevel !== 'all') ? `_${selectedLevel.replace(/[\/\\:*?"<>|.]/g, '')}` : '';
+        const filename = `สถิติขาดเรียน_ทุกห้อง${levelSuffix}${monthSuffix}_${term}_${year}.xlsx`;
         return { wb, filename };
     }
 }
@@ -1541,8 +1584,9 @@ app.get('/api/editor-download/export', async (req, res) => {
         const year = req.query.year || '2569';
         const classNo = req.query.classNo || 'all';
         const month = req.query.month;
+        const level = req.query.level;
 
-        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month);
+        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level);
 
         const asciiFilename = `attendance_${term}_${year}.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1565,7 +1609,8 @@ app.get('/editor-download', async (req, res, next) => {
             const year = req.query.year || '2569';
             const classNo = req.query.classNo || 'all';
             const month = req.query.month;
-            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month);
+            const level = req.query.level;
+            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level);
 
             const asciiFilename = `attendance_${term}_${year}.xlsx`;
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
