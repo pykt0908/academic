@@ -1377,12 +1377,54 @@ function formatSheetTitle(c, targetMonths, mNum) {
     return title.substring(0, 31);
 }
 
-async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth, selectedLevel, selectedRound) {
+async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth, selectedLevel, selectedRound, reportType = 'absence') {
     const termYear = `${term}/${year}`;
     const wb = new ExcelJS.Workbook();
     wb.creator = 'วิทยาลัยเทคโนโลยีศรีราชา';
     wb.lastModifiedBy = 'ระบบงานวิชาการ';
     wb.created = new Date();
+
+    const yearCE = year > 2500 ? (parseInt(year) - 543) : parseInt(year);
+    let startDateStr, endDateStr;
+    if (selectedMonth && selectedMonth !== 'all') {
+        const mNum = parseInt(selectedMonth);
+        const mYearCE = (String(term) === '2' && mNum <= 4) ? (yearCE + 1) : yearCE;
+        const lastDay = new Date(mYearCE, mNum, 0).getDate();
+        startDateStr = `${mYearCE}-${String(mNum).padStart(2, '0')}-01`;
+        endDateStr = `${mYearCE}-${String(mNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    } else {
+        if (String(term) === '1') {
+            startDateStr = `${yearCE}-05-01`;
+            endDateStr = `${yearCE}-10-31`;
+        } else {
+            startDateStr = `${yearCE}-10-01`;
+            endDateStr = `${yearCE + 1}-04-30`;
+        }
+    }
+
+    let notInRowSet = new Set();
+    const rowCheckedDatesByClass = new Map();
+
+    if (reportType === 'tardy') {
+        const notInRowRes = await executeSafeQuery(pool, `
+            SELECT DISTINCT SN.StdNo, CONVERT(VARCHAR(10), SN.DateInput, 120) as DateStr
+            FROM Government.dbo.tblInputStudentNotInRow SN
+            WHERE SN.DateInput >= @startDateStr AND SN.DateInput <= @endDateStr
+        `, { startDateStr, endDateStr });
+        notInRowSet = new Set(notInRowRes.recordset.map(r => `${String(r.StdNo).trim()}|${r.DateStr}`));
+
+        const rowTeacherRes = await executeSafeQuery(pool, `
+            SELECT DISTINCT ClassNo, CONVERT(VARCHAR(10), DateInput, 120) as DateStr
+            FROM Government.dbo.tblInputStudentInRowByTeacher
+            WHERE DateInput >= @startDateStr AND DateInput <= @endDateStr
+        `, { startDateStr, endDateStr });
+        rowTeacherRes.recordset.forEach(r => {
+            if (!rowCheckedDatesByClass.has(r.ClassNo)) {
+                rowCheckedDatesByClass.set(r.ClassNo, new Set());
+            }
+            rowCheckedDatesByClass.get(r.ClassNo).add(r.DateStr);
+        });
+    }
 
     if (classNo && classNo !== 'all') {
         const qClass = await executeSafeQuery(pool, `
@@ -1426,7 +1468,9 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
         const classData = {
             info: parsedInfo,
             students: studentsRes.recordset,
-            attRecords: attRes.recordset
+            attRecords: attRes.recordset,
+            notInRowSet,
+            rowCheckedDates: rowCheckedDatesByClass.get(classNo) || new Set()
         };
 
         let targetMonths = [];
@@ -1444,12 +1488,13 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
 
         targetMonths.forEach(mNum => {
             const sheetTitle = formatSheetTitle(parsedInfo, targetMonths, mNum);
-            buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle);
+            buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle, reportType);
         });
 
         const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
         const safeLevel = (parsedInfo.levelClass || classNo).replace(/[\/\\:*?"<>|]/g, '_');
-        const filename = `สถิติขาดเรียน_${safeLevel}${monthSuffix}_${term}_${year}.xlsx`;
+        const reportPrefix = reportType === 'tardy' ? 'รายงานการเข้าสาย' : 'สถิติขาดเรียน';
+        const filename = `${reportPrefix}_${safeLevel}${monthSuffix}_${term}_${year}.xlsx`;
         return { wb, filename };
     } else {
         const qRooms = await executeSafeQuery(pool, `
@@ -1568,12 +1613,14 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             const classData = {
                 info: parsedInfo,
                 students: classStds,
-                attRecords: classAtt
+                attRecords: classAtt,
+                notInRowSet,
+                rowCheckedDates: rowCheckedDatesByClass.get(c.ClassNo) || new Set()
             };
 
             targetMonths.forEach(mNum => {
                 const sheetTitle = formatSheetTitle(parsedInfo, targetMonths, mNum);
-                buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle);
+                buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle, reportType);
             });
         });
 
@@ -1581,7 +1628,8 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
         const roundSuffix = selectedRound && selectedRound !== 'all' ? (roundSuffixMap[selectedRound] || `_รอบ${selectedRound}`) : '';
         const levelSuffix = (selectedLevel && selectedLevel !== 'all') ? `_${selectedLevel.replace(/[\/\\:*?"<>|.]/g, '')}` : '';
         const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
-        const filename = `สถิติขาดเรียน_ทุกห้อง${levelSuffix}${roundSuffix}${monthSuffix}_${term}_${year}.xlsx`;
+        const reportPrefix = reportType === 'tardy' ? 'รายงานการเข้าสาย' : 'สถิติขาดเรียน';
+        const filename = `${reportPrefix}_ทุกห้อง${levelSuffix}${roundSuffix}${monthSuffix}_${term}_${year}.xlsx`;
         return { wb, filename };
     }
 }
@@ -1643,10 +1691,11 @@ app.get('/api/editor-download/export', async (req, res) => {
         const month = req.query.month;
         const level = req.query.level;
         const round = req.query.round;
+        const reportType = req.query.reportType || 'absence';
 
-        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level, round);
+        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level, round, reportType);
 
-        const asciiFilename = `attendance_${term}_${year}.xlsx`;
+        const asciiFilename = `${reportType === 'tardy' ? 'tardy' : 'attendance'}_${term}_${year}.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
 
@@ -1669,9 +1718,10 @@ app.get('/editor-download', async (req, res, next) => {
             const month = req.query.month;
             const level = req.query.level;
             const round = req.query.round;
-            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level, round);
+            const reportType = req.query.reportType || 'absence';
+            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level, round, reportType);
 
-            const asciiFilename = `attendance_${term}_${year}.xlsx`;
+            const asciiFilename = `${reportType === 'tardy' ? 'tardy' : 'attendance'}_${term}_${year}.xlsx`;
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
             await wb.xlsx.write(res);

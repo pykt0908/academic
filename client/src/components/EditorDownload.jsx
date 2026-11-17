@@ -88,6 +88,7 @@ const ROUND_OPTIONS = [
 ]
 
 export default function EditorDownload({ onNavigateHome }) {
+  const [reportType, setReportType] = useState('absence') // 'absence' or 'tardy'
   const [term, setTerm] = useState('2')
   const [year, setYear] = useState('2569')
   const [selectedMonth, setSelectedMonth] = useState('all')
@@ -180,13 +181,15 @@ export default function EditorDownload({ onNavigateHome }) {
     const monthParam = selectedMonth !== 'all' ? `&month=${selectedMonth}` : ''
     const levelParam = selectedLevel !== 'all' ? `&level=${encodeURIComponent(selectedLevel)}` : ''
     const roundParam = selectedRound !== 'all' ? `&round=${encodeURIComponent(selectedRound)}` : ''
-    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(selectedClass)}${monthParam}${levelParam}${roundParam}`
+    const reportTypeParam = `&reportType=${reportType}`
+    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(selectedClass)}${monthParam}${levelParam}${roundParam}${reportTypeParam}`
 
     const link = document.createElement('a')
     link.href = url
     const monthSuffix = selectedMonth !== 'all' ? `_เดือน${selectedMonth}` : ''
     const targetLabel = selectedClass === 'all' ? 'ทุกห้อง' : selectedClass
-    link.setAttribute('download', `สถิติขาดเรียน_${targetLabel}_${term}_${year}${monthSuffix}.xlsx`)
+    const reportPrefix = reportType === 'tardy' ? 'รายงานการเข้าสาย' : 'สถิติขาดเรียน'
+    link.setAttribute('download', `${reportPrefix}_${targetLabel}_${term}_${year}${monthSuffix}.xlsx`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -199,7 +202,8 @@ export default function EditorDownload({ onNavigateHome }) {
         ? `ทุกห้องเรียน (${filteredClassList.length} ห้อง)`
         : (classes.find(c => c.ClassNo === selectedClass)?.ClassName || selectedClass)
       const fullLabel = rLabel ? `${cLabel} (${rLabel})` : cLabel
-      setSuccessMsg(`ดาวน์โหลดไฟล์ Excel ของ ${fullLabel} [${mLabel}] เรียบร้อยแล้ว`)
+      const rTypeName = reportType === 'tardy' ? 'รายงานการเข้าสาย' : 'สถิติการขาดเรียน'
+      setSuccessMsg(`ดาวน์โหลดไฟล์ Excel ${rTypeName} ของ ${fullLabel} [${mLabel}] เรียบร้อยแล้ว`)
       setTimeout(() => setSuccessMsg(''), 5000)
     }, 1500)
   }
@@ -263,16 +267,51 @@ export default function EditorDownload({ onNavigateHome }) {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: '#059669', mb: 0.5 }}>
                 <FileSpreadsheet className="w-6 h-6 text-emerald-600 shrink-0" />
                 <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>
-                  ส่งออกสถิติการขาดเรียน (Excel)
+                  {reportType === 'tardy' ? 'ส่งออกรายงานการเข้าสาย / เช็คแถว (Excel)' : 'ส่งออกสถิติการขาดเรียน (Excel)'}
                 </Typography>
               </Box>
               <Typography variant="body2" sx={{ color: '#64748b' }}>
-                แบบฟอร์มสถิติการขาดเรียนของนักศึกษา (งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา)
+                {reportType === 'tardy'
+                  ? 'รายงานสถิติการเข้าสายและการขาดเรียนของนักศึกษา (วิเคราะห์จากการเช็คแถวและคาบเรียน)'
+                  : 'แบบฟอร์มสถิติการขาดเรียนของนักศึกษา (งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา)'}
               </Typography>
             </Box>
 
             {/* Form Controls with Material Style */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              {/* Row 0: Report Type Selector */}
+              <FormControl fullWidth size="medium">
+                <InputLabel id="report-type-label">ประเภทรายงาน</InputLabel>
+                <Select
+                  labelId="report-type-label"
+                  id="report-type-select"
+                  value={reportType}
+                  label="ประเภทรายงาน"
+                  onChange={e => setReportType(e.target.value)}
+                >
+                  <MenuItem value="absence">
+                    <Box sx={{ py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                        📋 สถิติการขาดเรียน (รายเดือน)
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                        นับสถิติ ขาด / ลา จากการเช็คชื่อรายวิชา
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="tardy">
+                    <Box sx={{ py: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#d97706' }}>
+                        ⏰ รายงานการเข้าสาย / เช็คแถว (รายเดือน)
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                        วิเคราะห์จากการเช็คแถวหน้าเสาธง (ขาดแถวแต่เข้าเรียน = สาย)
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+
               {/* Row 1: Term & Year */}
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                 <FormControl fullWidth size="medium">

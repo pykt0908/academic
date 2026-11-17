@@ -29,10 +29,11 @@ function getWeekdaysInMonth(yearCE, monthNum) {
 
 /**
  * Build Student Affairs Attendance Sheet (Matching user's exact physical form)
- * รูปแบบ: สถิติการขาดเรียนของนักศึกษา (ฝ่ายปกครอง) รายเดือน เลือกเดือนได้
+ * รูปแบบ: สถิติการขาดเรียนของนักศึกษา (ฝ่ายปกครอง) หรือ รายงานสถิติการเข้าสาย รายเดือน
  */
-function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, sheetTitle) {
-    const { info, students, attRecords } = classData;
+function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, sheetTitle, reportType = 'absence') {
+    const { info, students, attRecords, notInRowSet, rowCheckedDates } = classData;
+    const isTardyReport = reportType === 'tardy';
     const yearCE = info.year > 2500 ? (parseInt(info.year) - 543) : parseInt(info.year);
     const yearThai = info.year > 2500 ? info.year : (parseInt(info.year) + 543);
     const monthName = THAI_MONTHS_FULL[targetMonthNum] || '';
@@ -102,33 +103,55 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
 
     function getStudentDayStatus(sId, dateStr) {
         const key = `${sId}|${dateStr}`;
-        const periods = studentDayPeriods.get(key);
-        if (!periods || periods.length === 0) {
-            // หากวันนั้นโรงเรียนมีการเช็คชื่อ แต่ไม่มีประวัติขาด/ลา ถือว่ามาเรียนปกติ
-            return checkedDates.has(dateStr) ? '/' : '';
+        const periods = studentDayPeriods.get(key) || [];
+        const isAbsentFromRow = notInRowSet && notInRowSet.has(key);
+        const dayHasData = checkedDates.has(dateStr) || (rowCheckedDates && rowCheckedDates.has(dateStr));
+
+        if (!dayHasData && periods.length === 0) {
+            return '';
         }
 
-        // เงื่อนไข: แค่มาแค่คาบเดียว (มี 'ม' หรือ '/') ก็นับว่ามาเรียน ('/')
         const hasPresent = periods.some(st => st === 'ม' || st === '/');
-        if (hasPresent) {
+        const hasSick = periods.some(st => st === 'ป');
+        const hasLeave = periods.some(st => st === 'ล');
+        const allAbsent = periods.length > 0 && periods.every(st => st === 'ข');
+
+        if (isTardyReport) {
+            // เงื่อนไขรายงานการเข้าสาย:
+            // 1. ถ้าข้อมูลเช็คแถวเป็น ขาด (อยู่ใน tblInputStudentNotInRow)
+            if (isAbsentFromRow) {
+                // มีการเช็คชื่อในรายวิชาอื่น ๆ หมายความว่า "สาย" ('ส')
+                if (hasPresent) {
+                    return 'ส';
+                }
+                // ถ้ามีการบันทึกเป็นลา ก็คือ ลา ('ล') หรือ ป่วย ('ป')
+                if (hasSick) return 'ป';
+                if (hasLeave) return 'ล';
+                // ถ้าขาดในเช็คแถว แล้ววิชาอื่น ๆ ก็ขาด (หรือไม่ได้บันทึกมาเรียนเลย) ก็คือ ขาด ('ข')
+                return 'ข';
+            }
+
+            // 2. ไม่ได้ขาดเช็คแถว (เข้าแถวปกติ)
+            if (hasSick) return 'ป';
+            if (hasLeave) return 'ล';
+            if (allAbsent) return 'ข';
+            if (hasPresent || (rowCheckedDates && rowCheckedDates.has(dateStr))) return '/';
+            return checkedDates.has(dateStr) ? '/' : '';
+        } else {
+            // เงื่อนไขรายงานสถิติการขาดเรียน:
+            if (periods.length === 0) {
+                return checkedDates.has(dateStr) ? '/' : '';
+            }
+            if (hasPresent) {
+                return '/';
+            }
+            if (periods.some(st => st === 'ข')) {
+                return 'ข';
+            }
+            if (hasSick) return 'ป';
+            if (hasLeave) return 'ล';
             return '/';
         }
-
-        // หากไม่ได้เข้าเรียนเลยสักคาบ:
-        // ตรวจสอบว่ามีขาดเรียน ('ข') หรือไม่
-        if (periods.some(st => st === 'ข')) {
-            return 'ข';
-        }
-
-        // ตรวจสอบว่าเป็นการลาป่วย ('ป') หรือลากิจ ('ล')
-        if (periods.some(st => st === 'ป')) {
-            return 'ป';
-        }
-        if (periods.some(st => st === 'ล')) {
-            return 'ล';
-        }
-
-        return '/';
     }
 
     // Header Styling
@@ -149,15 +172,21 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     ws.getCell('C2').value = 'งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา';
     ws.getCell('C2').font = { name: 'Sarabun', size: 11, bold: true, color: { argb: 'FF111827' } };
 
-    ws.getCell('C3').value = 'สถิติการขาดเรียนของนักศึกษา';
+    ws.getCell('C3').value = isTardyReport ? 'รายงานสถิติการเข้าสายและการขาดเรียนของนักศึกษา' : 'สถิติการขาดเรียนของนักศึกษา';
     ws.getCell('C3').font = { name: 'Sarabun', size: 11, bold: true, color: { argb: 'FF111827' } };
 
     ws.getCell('C4').value = `ปีการศึกษา ${info.term}/${yearThai}`;
     ws.getCell('C4').font = { name: 'Sarabun', size: 10, bold: true, color: { argb: 'FF334155' } };
 
-    // Website link at top right
-    const linkColIdx = 6 + weekdays.length + 1;
-    const linkColLetter = ws.getColumn(linkColIdx).letter;
+    // Column calculation for table headers
+    const dateStartCol = 6;
+    const dateEndCol = dateStartCol + weekdays.length - 1;
+    const absStartCol = dateEndCol + 1;
+    const summaryColsCount = isTardyReport ? 4 : 3;
+    const noteCol = absStartCol + summaryColsCount;
+
+    // Website link at top right (aligned with noteCol)
+    const linkColLetter = ws.getColumn(noteCol).letter;
     ws.getCell(`${linkColLetter}2`).value = {
         text: 'www.technosriracha.ac.th',
         hyperlink: 'https://www.technosriracha.ac.th'
@@ -175,7 +204,7 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     ws.getCell('A5').value = `ระดับชั้น ${levelClass} สาขา ${departName} รอบ ${roundName}`;
     ws.getCell('A5').font = { name: 'Sarabun', size: 10, bold: true };
 
-    const monthLabelCol = ws.getColumn(6 + weekdays.length - 2).letter;
+    const monthLabelCol = ws.getColumn(Math.max(1, noteCol - 3)).letter;
     ws.getCell(`${monthLabelCol}5`).value = `ประจำเดือน ${monthName} ${yearThai}`;
     ws.getCell(`${monthLabelCol}5`).font = { name: 'Sarabun', size: 10, bold: true };
     ws.getCell(`${monthLabelCol}5`).alignment = { horizontal: 'right', vertical: 'middle' };
@@ -201,8 +230,6 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     hmCell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
 
     // Days Header (Row 6)
-    const dateStartCol = 6;
-    const dateEndCol = dateStartCol + weekdays.length - 1;
     ws.mergeCells(6, dateStartCol, 6, dateEndCol);
     const dtHdr = ws.getCell(6, dateStartCol);
     dtHdr.value = 'วันที่';
@@ -217,14 +244,13 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
         c.fill = headerFill;
     });
 
-    // Absence Summary Headers
-    const absStartCol = dateEndCol + 1;
-    ws.mergeCells(6, absStartCol, 6, absStartCol + 2);
+    // Summary Headers (Row 6 & 7)
+    ws.mergeCells(6, absStartCol, 6, absStartCol + summaryColsCount - 1);
     const absHdr = ws.getCell(6, absStartCol);
-    absHdr.value = 'จำนวนที่ขาด';
+    absHdr.value = isTardyReport ? 'จำนวนครั้ง' : 'จำนวนที่ขาด';
     absHdr.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    const absSub = ['ขาด', 'ลา', 'รวม'];
+    const absSub = isTardyReport ? ['สาย', 'ขาด', 'ลา', 'รวม'] : ['ขาด', 'ลา', 'รวม'];
     absSub.forEach((sh, idx) => {
         const c = ws.getCell(7, absStartCol + idx);
         c.value = sh;
@@ -234,7 +260,6 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     });
 
     // Note Header
-    const noteCol = absStartCol + 3;
     ws.mergeCells(6, noteCol, 7, noteCol);
     const noteHdr = ws.getCell(6, noteCol);
     noteHdr.value = 'หมายเหตุ';
@@ -261,8 +286,6 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     // ==========================================
     const startLetter = ws.getColumn(dateStartCol).letter;
     const endLetter = ws.getColumn(dateEndCol).letter;
-    const absLetter = ws.getColumn(absStartCol).letter;
-    const leaveLetter = ws.getColumn(absStartCol + 1).letter;
 
     let curRow = 8;
     students.forEach((std, sIdx) => {
@@ -283,6 +306,7 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
         r.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
         r.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
 
+        let tardyCount = 0;
         let absentCount = 0;
         let leaveCount = 0;
 
@@ -291,7 +315,11 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
             const st = getStudentDayStatus(sId, w.dateStr);
             let displayChar = '';
 
-            if (st === 'ข') {
+            if (st === 'ส') {
+                displayChar = 'ส';
+                tardyCount++;
+                cell.font = { name: 'Sarabun', size: 9, bold: true, color: { argb: 'FFD97706' } }; // Gold/Amber ส
+            } else if (st === 'ข') {
                 displayChar = 'ข';
                 absentCount++;
                 cell.font = { name: 'Sarabun', size: 9, bold: true, color: { argb: 'FFFF0000' } }; // Red ข
@@ -312,32 +340,70 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
             cell.alignment = { horizontal: 'center', vertical: 'middle' };
         });
 
-        // Summary columns: ขาด, ลา, รวม (ใช้สูตร Excel เพื่อให้อัปเดตอัตโนมัติเมื่อมีการแก้ไขข้อมูล)
+        // Summary columns: ใช้สูตร Excel เพื่อให้อัปเดตอัตโนมัติเมื่อมีการแก้ไขข้อมูล
         const dateRange = `${startLetter}${curRow}:${endLetter}${curRow}`;
-        r.getCell(absStartCol).value = {
-            formula: `COUNTIF(${dateRange},"ข")`,
-            result: absentCount
-        };
-        r.getCell(absStartCol + 1).value = {
-            formula: `COUNTIF(${dateRange},"ล")+COUNTIF(${dateRange},"ป")`,
-            result: leaveCount
-        };
-        r.getCell(absStartCol + 2).value = {
-            formula: `SUM(${absLetter}${curRow}:${leaveLetter}${curRow})`,
-            result: absentCount + leaveCount
-        };
+        if (isTardyReport) {
+            // 4 คอลัมน์: สาย, ขาด, ลา, รวม
+            const tardyColLetter = ws.getColumn(absStartCol).letter;
+            const absentColLetter = ws.getColumn(absStartCol + 1).letter;
+            const leaveColLetter = ws.getColumn(absStartCol + 2).letter;
 
-        for (let i = 0; i < 3; i++) {
-            const c = r.getCell(absStartCol + i);
-            c.alignment = { horizontal: 'center', vertical: 'middle' };
-            c.font = { name: 'Sarabun', size: 9.5 };
-            if (i === 0 && absentCount > 0) {
-                c.font = { name: 'Sarabun', size: 9.5, bold: true, color: { argb: 'FFFF0000' } };
+            r.getCell(absStartCol).value = {
+                formula: `COUNTIF(${dateRange},"ส")`,
+                result: tardyCount
+            };
+            r.getCell(absStartCol + 1).value = {
+                formula: `COUNTIF(${dateRange},"ข")`,
+                result: absentCount
+            };
+            r.getCell(absStartCol + 2).value = {
+                formula: `COUNTIF(${dateRange},"ล")+COUNTIF(${dateRange},"ป")`,
+                result: leaveCount
+            };
+            r.getCell(absStartCol + 3).value = {
+                formula: `SUM(${tardyColLetter}${curRow}:${leaveColLetter}${curRow})`,
+                result: tardyCount + absentCount + leaveCount
+            };
+
+            for (let i = 0; i < 4; i++) {
+                const c = r.getCell(absStartCol + i);
+                c.alignment = { horizontal: 'center', vertical: 'middle' };
+                c.font = { name: 'Sarabun', size: 9.5 };
+                if (i === 0 && tardyCount > 0) {
+                    c.font = { name: 'Sarabun', size: 9.5, bold: true, color: { argb: 'FFD97706' } };
+                } else if (i === 1 && absentCount > 0) {
+                    c.font = { name: 'Sarabun', size: 9.5, bold: true, color: { argb: 'FFFF0000' } };
+                }
+            }
+        } else {
+            // 3 คอลัมน์: ขาด, ลา, รวม
+            const absLetter = ws.getColumn(absStartCol).letter;
+            const leaveLetter = ws.getColumn(absStartCol + 1).letter;
+
+            r.getCell(absStartCol).value = {
+                formula: `COUNTIF(${dateRange},"ข")`,
+                result: absentCount
+            };
+            r.getCell(absStartCol + 1).value = {
+                formula: `COUNTIF(${dateRange},"ล")+COUNTIF(${dateRange},"ป")`,
+                result: leaveCount
+            };
+            r.getCell(absStartCol + 2).value = {
+                formula: `SUM(${absLetter}${curRow}:${leaveLetter}${curRow})`,
+                result: absentCount + leaveCount
+            };
+
+            for (let i = 0; i < 3; i++) {
+                const c = r.getCell(absStartCol + i);
+                c.alignment = { horizontal: 'center', vertical: 'middle' };
+                c.font = { name: 'Sarabun', size: 9.5 };
+                if (i === 0 && absentCount > 0) {
+                    c.font = { name: 'Sarabun', size: 9.5, bold: true, color: { argb: 'FFFF0000' } };
+                }
             }
         }
 
         r.getCell(noteCol).value = '';
-
         curRow++;
     });
 
@@ -368,10 +434,18 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     for (let cl = dateStartCol; cl <= dateEndCol; cl++) {
         ws.getColumn(cl).width = 3.6; // วันที่
     }
-    ws.getColumn(absStartCol).width = 6.5;     // ขาด
-    ws.getColumn(absStartCol + 1).width = 6.5; // ลา
-    ws.getColumn(absStartCol + 2).width = 6.5; // รวม
-    ws.getColumn(noteCol).width = 12;          // หมายเหตุ
+    if (isTardyReport) {
+        ws.getColumn(absStartCol).width = 5.5;     // สาย
+        ws.getColumn(absStartCol + 1).width = 5.5; // ขาด
+        ws.getColumn(absStartCol + 2).width = 5.5; // ลา
+        ws.getColumn(absStartCol + 3).width = 5.5; // รวม
+        ws.getColumn(noteCol).width = 11;          // หมายเหตุ
+    } else {
+        ws.getColumn(absStartCol).width = 6.5;     // ขาด
+        ws.getColumn(absStartCol + 1).width = 6.5; // ลา
+        ws.getColumn(absStartCol + 2).width = 6.5; // รวม
+        ws.getColumn(noteCol).width = 12;          // หมายเหตุ
+    }
 
     return ws;
 }
