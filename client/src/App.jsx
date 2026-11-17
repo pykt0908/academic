@@ -38,6 +38,7 @@ import PrintIcon from '@mui/icons-material/Print'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SchoolIcon from '@mui/icons-material/School'
+import EditorDownload from './components/EditorDownload'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 
@@ -114,6 +115,14 @@ const theme = createTheme({
 })
 
 export default function App() {
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname)
+
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(window.location.pathname)
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   const [token, setToken] = useState(() => localStorage.getItem('teacher_token') || null)
   const [teacher, setTeacher] = useState(null)
 
@@ -712,6 +721,20 @@ export default function App() {
   }
 
   // ==========================================
+  // VIEW: EDITOR DOWNLOAD (Excel Monthly Export)
+  // ==========================================
+  if (currentPath.startsWith('/editor-download')) {
+    return (
+      <EditorDownload
+        onNavigateHome={() => {
+          window.history.pushState({}, '', '/')
+          setCurrentPath('/')
+        }}
+      />
+    )
+  }
+
+  // ==========================================
   // VIEW 1: LOGIN (Zero Border Radius, Clean)
   // ==========================================
   if (!token) {
@@ -799,6 +822,28 @@ export default function App() {
                 {loginLoading ? <CircularProgress size={22} color="inherit" /> : 'เข้าสู่ระบบ'}
               </Button>
             </Box>
+
+            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e2e8f0' }}>
+              <Button
+                variant="text"
+                size="small"
+                fullWidth
+                onClick={() => {
+                  window.history.pushState({}, '', '/editor-download')
+                  setCurrentPath('/editor-download')
+                }}
+                startIcon={<FileDownloadIcon fontSize="small" />}
+                sx={{
+                  color: '#16a34a',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  py: 1,
+                  '&:hover': { bgcolor: '#f0fdf4', color: '#15803d' }
+                }}
+              >
+                ดาวน์โหลดสถิติเวลาเรียน (Excel)
+              </Button>
+            </Box>
           </Paper>
         </Box>
       </ThemeProvider>
@@ -836,6 +881,28 @@ export default function App() {
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => {
+                    window.history.pushState({}, '', '/editor-download')
+                    setCurrentPath('/editor-download')
+                  }}
+                  startIcon={<FileDownloadIcon fontSize="small" />}
+                  sx={{
+                    borderRadius: 0,
+                    bgcolor: '#16a34a',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    boxShadow: 'none',
+                    px: 1.8,
+                    '&:hover': { bgcolor: '#15803d', boxShadow: 'none' }
+                  }}
+                >
+                  ส่งออกสถิติ Excel
+                </Button>
+
                 <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
                   <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
                     {teacher?.TeacherName || teacher?.TeacherNo}

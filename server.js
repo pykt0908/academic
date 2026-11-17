@@ -3,6 +3,7 @@ const sql = require('mssql');
 const cors = require('cors');
 const path = require('path');
 const ExcelJS = require('exceljs');
+const { buildClassroomWorksheet, buildDailyWorksheet, buildMasterOverviewSheet } = require('./services/attendanceExcelService');
 require('dotenv').config();
 
 const app = express();
@@ -1286,6 +1287,400 @@ app.get('/api/teacher/teaching-logs', requireTeacherAuth, async (req, res) => {
         console.error('Teaching Logs API Error:', err);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูลบันทึกการสอน: ' + err.message });
     }
+});
+
+// ==========================================
+// EDITOR DOWNLOAD: Monthly Attendance Excel Export Services
+// ==========================================
+
+async function exportAttendanceExcelHelper(pool, term, year, classNo) {
+    const termYear = `${term}/${year}`;
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'วิทยาลัยเทคโนโลยีศรีราชา';
+    wb.lastModifiedBy = 'ระบบงานวิชาการ';
+    wb.created = new Date();
+
+    if (classNo && classNo !== 'all') {
+        const qClass = await executeSafeQuery(pool, `
+            SELECT TOP 1
+              tl.LavelName, td.DepartNamefull,
+              SUBSTRING(@classNo, 5, 1) AS [Year],
+              SUBSTRING(@classNo, 6, 10) AS Room
+            FROM Basedata.dbo.tblLavel tl, Basedata.dbo.tblDepart td
+            WHERE tl.LavelNo = SUBSTRING(@classNo, 1, 1)
+              AND td.DepartNo = SUBSTRING(@classNo, 2, 2)
+        `, { classNo });
+        const cInfo = qClass.recordset[0] || {};
+        const className = `${cInfo.LavelName || ''} ${cInfo.Year || ''}/${cInfo.Room || ''} ${cInfo.DepartNamefull || ''}`.trim() || classNo;
+
+        const studentsRes = await executeSafeQuery(pool, `
+            SELECT SR.No_Room, SR.StdNo,
+                   IsNull(V.PrefixNameFull,'') + V.Fname + ' ' + V.Lname AS StdName
+            FROM Tabain.dbo.tblStudentRoom SR
+            JOIN Tabain.dbo.v_student V ON SR.StdNo = V.StdNo
+            WHERE SR.LavelNo + SR.DepartNo + SR.RoundNo + SR.[Year] + SR.Room = @classNo
+            ORDER BY (CASE WHEN SR.No_Room LIKE '%[^0-9]%' OR LEN(SR.No_Room) > 4 THEN 9999 ELSE CAST(SR.No_Room AS INT) END), SR.StdNo
+        `, { classNo });
+
+        const attRes = await executeSafeQuery(pool, `
+            SELECT 
+              CM.SLICNo,
+              CONVERT(VARCHAR(10), CM.DateInput, 120) as DateStr,
+              MONTH(CM.DateInput) as MonthNum,
+              YEAR(CM.DateInput) as YearNum,
+              CD.TimeNo,
+              CD.StdNo,
+              LTRIM(RTRIM(CD.DintComeStdTypeInClass)) as Status
+            FROM Government.dbo.tblStdLearnInClassMain CM
+            JOIN Government.dbo.tblStdLearnInClassDetail CD ON CM.SLICNo = CD.SLICNo
+            WHERE CM.TermYear = @termYear AND CM.ClassNo = @classNo AND CD.TimeNo > 0
+            ORDER BY CM.DateInput, CD.TimeNo
+        `, { termYear, classNo });
+
+        const monthMap = new Map();
+        const studentMap = new Map();
+
+        studentsRes.recordset.forEach(s => {
+            const sId = String(s.StdNo).trim();
+            studentMap.set(sId, {
+                no: s.No_Room || '',
+                stdNo: sId,
+                name: s.StdName || '',
+                months: new Map(),
+                totalPresent: 0,
+                totalAbsent: 0,
+                totalLeave: 0,
+                totalSick: 0,
+                totalPeriods: 0
+            });
+        });
+
+        attRes.recordset.forEach(r => {
+            const sId = String(r.StdNo).trim();
+            if (!studentMap.has(sId)) {
+                studentMap.set(sId, {
+                    no: '',
+                    stdNo: sId,
+                    name: 'รหัสนักศึกษา ' + sId,
+                    months: new Map(),
+                    totalPresent: 0,
+                    totalAbsent: 0,
+                    totalLeave: 0,
+                    totalSick: 0,
+                    totalPeriods: 0
+                });
+            }
+
+            const yThai = r.YearNum > 2500 ? r.YearNum : r.YearNum + 543;
+            const mKey = `${yThai}-${String(r.MonthNum).padStart(2, '0')}`;
+            if (!monthMap.has(mKey)) {
+                monthMap.set(mKey, {
+                    mKey,
+                    monthNum: r.MonthNum,
+                    yearThai: yThai,
+                    label: `${THAI_MONTHS[r.MonthNum - 1] || ''} ${yThai}`
+                });
+            }
+
+            const sObj = studentMap.get(sId);
+            if (!sObj.months.has(mKey)) {
+                sObj.months.set(mKey, { present: 0, absent: 0, leave: 0, sick: 0, total: 0 });
+            }
+            const mStats = sObj.months.get(mKey);
+            mStats.total++;
+            sObj.totalPeriods++;
+
+            const st = r.Status;
+            if (st === 'ข') {
+                mStats.absent++;
+                sObj.totalAbsent++;
+            } else if (st === 'ล') {
+                mStats.leave++;
+                sObj.totalLeave++;
+            } else if (st === 'ป') {
+                mStats.sick++;
+                sObj.totalSick++;
+            } else {
+                mStats.present++;
+                sObj.totalPresent++;
+            }
+        });
+
+        const sortedMonths = Array.from(monthMap.values()).sort((a, b) => a.mKey.localeCompare(b.mKey));
+        const sortedStudents = Array.from(studentMap.values()).sort((a, b) => {
+            const na = parseInt(a.no) || 9999;
+            const nb = parseInt(b.no) || 9999;
+            if (na !== nb) return na - nb;
+            return a.stdNo.localeCompare(b.stdNo);
+        });
+
+        const classData = {
+            info: { classNo, className, term, year },
+            students: sortedStudents,
+            months: sortedMonths,
+            attRecords: attRes.recordset
+        };
+
+        buildClassroomWorksheet(wb, classData, 'สถิติรายเดือน');
+        buildDailyWorksheet(wb, classData);
+
+        return { wb, filename: `attendance_monthly_${classNo}_${term}_${year}.xlsx` };
+    } else {
+        const qRooms = await executeSafeQuery(pool, `
+            SELECT DISTINCT CM.ClassNo,
+                   tl.LavelName, td.DepartNamefull,
+                   COALESCE(
+                     NULLIF(LTRIM(RTRIM(IsNull(tl.LavelName, '') + ' ' + SUBSTRING(CM.ClassNo, 5, 1) + '/' + SUBSTRING(CM.ClassNo, 6, CASE WHEN LEN(CM.ClassNo) > 5 THEN LEN(CM.ClassNo) - 5 ELSE 1 END) + ' ' + IsNull(td.DepartNamefull, ''))), ''),
+                     CM.ClassNo
+                   ) AS ClassName
+            FROM Government.dbo.tblStdLearnInClassMain CM
+            LEFT JOIN Basedata.dbo.tblLavel tl ON tl.LavelNo = SUBSTRING(CM.ClassNo, 1, 1)
+            LEFT JOIN Basedata.dbo.tblDepart td ON td.DepartNo = SUBSTRING(CM.ClassNo, 2, 2)
+            WHERE CM.TermYear = @termYear
+            ORDER BY CM.ClassNo
+        `, { termYear });
+
+        const classrooms = qRooms.recordset;
+
+        const attRes = await executeSafeQuery(pool, `
+            SELECT 
+              CM.ClassNo,
+              CONVERT(VARCHAR(10), CM.DateInput, 120) as DateStr,
+              MONTH(CM.DateInput) as MonthNum,
+              YEAR(CM.DateInput) as YearNum,
+              CD.TimeNo,
+              CD.StdNo,
+              LTRIM(RTRIM(CD.DintComeStdTypeInClass)) as Status
+            FROM Government.dbo.tblStdLearnInClassMain CM
+            JOIN Government.dbo.tblStdLearnInClassDetail CD ON CM.SLICNo = CD.SLICNo
+            WHERE CM.TermYear = @termYear AND CD.TimeNo > 0
+        `, { termYear });
+
+        const attByClass = new Map();
+        attRes.recordset.forEach(r => {
+            if (!attByClass.has(r.ClassNo)) attByClass.set(r.ClassNo, []);
+            attByClass.get(r.ClassNo).push(r);
+        });
+
+        const stdRes = await executeSafeQuery(pool, `
+            SELECT 
+              (SR.LavelNo + SR.DepartNo + SR.RoundNo + SR.[Year] + SR.Room) AS ClassNo,
+              SR.No_Room, SR.StdNo,
+              IsNull(V.PrefixNameFull,'') + V.Fname + ' ' + V.Lname AS StdName
+            FROM Tabain.dbo.tblStudentRoom SR
+            JOIN Tabain.dbo.v_student V ON SR.StdNo = V.StdNo
+            ORDER BY (CASE WHEN SR.No_Room LIKE '%[^0-9]%' OR LEN(SR.No_Room) > 4 THEN 9999 ELSE CAST(SR.No_Room AS INT) END), SR.StdNo
+        `);
+
+        const stdByClass = new Map();
+        stdRes.recordset.forEach(s => {
+            if (!stdByClass.has(s.ClassNo)) stdByClass.set(s.ClassNo, []);
+            stdByClass.get(s.ClassNo).push(s);
+        });
+
+        const allClassStats = [];
+
+        classrooms.forEach((c) => {
+            const classAtt = attByClass.get(c.ClassNo) || [];
+            const classStds = stdByClass.get(c.ClassNo) || [];
+
+            const monthMap = new Map();
+            const studentMap = new Map();
+
+            classStds.forEach(s => {
+                const sId = String(s.StdNo).trim();
+                studentMap.set(sId, {
+                    no: s.No_Room || '',
+                    stdNo: sId,
+                    name: s.StdName || '',
+                    months: new Map(),
+                    totalPresent: 0,
+                    totalAbsent: 0,
+                    totalLeave: 0,
+                    totalSick: 0,
+                    totalPeriods: 0
+                });
+            });
+
+            let roomPresent = 0, roomAbsent = 0, roomLeave = 0, roomSick = 0, roomPeriods = 0;
+
+            classAtt.forEach(r => {
+                const sId = String(r.StdNo).trim();
+                if (!studentMap.has(sId)) {
+                    studentMap.set(sId, {
+                        no: '',
+                        stdNo: sId,
+                        name: 'รหัสนักศึกษา ' + sId,
+                        months: new Map(),
+                        totalPresent: 0,
+                        totalAbsent: 0,
+                        totalLeave: 0,
+                        totalSick: 0,
+                        totalPeriods: 0
+                    });
+                }
+
+                const yThai = r.YearNum > 2500 ? r.YearNum : r.YearNum + 543;
+                const mKey = `${yThai}-${String(r.MonthNum).padStart(2, '0')}`;
+                if (!monthMap.has(mKey)) {
+                    monthMap.set(mKey, {
+                        mKey,
+                        monthNum: r.MonthNum,
+                        yearThai: yThai,
+                        label: `${THAI_MONTHS[r.MonthNum - 1] || ''} ${yThai}`
+                    });
+                }
+
+                const sObj = studentMap.get(sId);
+                if (!sObj.months.has(mKey)) {
+                    sObj.months.set(mKey, { present: 0, absent: 0, leave: 0, sick: 0, total: 0 });
+                }
+                const mStats = sObj.months.get(mKey);
+                mStats.total++;
+                sObj.totalPeriods++;
+                roomPeriods++;
+
+                const st = r.Status;
+                if (st === 'ข') {
+                    mStats.absent++;
+                    sObj.totalAbsent++;
+                    roomAbsent++;
+                } else if (st === 'ล') {
+                    mStats.leave++;
+                    sObj.totalLeave++;
+                    roomLeave++;
+                } else if (st === 'ป') {
+                    mStats.sick++;
+                    sObj.totalSick++;
+                    roomSick++;
+                } else {
+                    mStats.present++;
+                    sObj.totalPresent++;
+                    roomPresent++;
+                }
+            });
+
+            const sortedMonths = Array.from(monthMap.values()).sort((a, b) => a.mKey.localeCompare(b.mKey));
+            const sortedStudents = Array.from(studentMap.values()).sort((a, b) => {
+                const na = parseInt(a.no) || 9999;
+                const nb = parseInt(b.no) || 9999;
+                if (na !== nb) return na - nb;
+                return a.stdNo.localeCompare(b.stdNo);
+            });
+
+            allClassStats.push({
+                classNo: c.ClassNo,
+                className: c.ClassName,
+                lavelName: c.LavelName,
+                departName: c.DepartNamefull,
+                studentCount: sortedStudents.length,
+                totalPeriods: roomPeriods,
+                totalPresent: roomPresent,
+                totalAbsent: roomAbsent,
+                totalLeave: roomLeave,
+                totalSick: roomSick
+            });
+
+            const shortName = `${c.ClassName || c.ClassNo}`.substring(0, 30);
+            buildClassroomWorksheet(wb, {
+                info: { ...c, term, year },
+                students: sortedStudents,
+                months: sortedMonths,
+                attRecords: classAtt
+            }, shortName);
+        });
+
+        buildMasterOverviewSheet(wb, allClassStats, term, year);
+        const overviewSheet = wb.getWorksheet('ภาพรวมทุกห้องเรียน');
+        if (overviewSheet) {
+            wb.worksheets.pop();
+            wb.worksheets.unshift(overviewSheet);
+        }
+
+        return { wb, filename: `attendance_monthly_all_classes_${term}_${year}.xlsx` };
+    }
+}
+
+// 1. Get Classrooms list for Editor Download
+app.get('/api/editor-download/classes', async (req, res) => {
+    try {
+        const pool = await getPool();
+        const term = req.query.term || '2';
+        const year = req.query.year || '2569';
+        const termYear = `${term}/${year}`;
+
+        const qRooms = await executeSafeQuery(pool, `
+            SELECT DISTINCT CM.ClassNo,
+                   tl.LavelName, td.DepartNamefull,
+                   COALESCE(
+                     NULLIF(LTRIM(RTRIM(IsNull(tl.LavelName, '') + ' ' + SUBSTRING(CM.ClassNo, 5, 1) + '/' + SUBSTRING(CM.ClassNo, 6, CASE WHEN LEN(CM.ClassNo) > 5 THEN LEN(CM.ClassNo) - 5 ELSE 1 END) + ' ' + IsNull(td.DepartNamefull, ''))), ''),
+                     CM.ClassNo
+                   ) AS ClassName,
+                   COUNT(DISTINCT CD.StdNo) as StudentCount,
+                   COUNT(DISTINCT CONVERT(VARCHAR(10), CM.DateInput, 120)) as DaysChecked,
+                   COUNT(CD.SLICNo) as PeriodsChecked
+            FROM Government.dbo.tblStdLearnInClassMain CM
+            LEFT JOIN Government.dbo.tblStdLearnInClassDetail CD ON CM.SLICNo = CD.SLICNo AND CD.TimeNo > 0
+            LEFT JOIN Basedata.dbo.tblLavel tl ON tl.LavelNo = SUBSTRING(CM.ClassNo, 1, 1)
+            LEFT JOIN Basedata.dbo.tblDepart td ON td.DepartNo = SUBSTRING(CM.ClassNo, 2, 2)
+            WHERE CM.TermYear = @termYear
+            GROUP BY CM.ClassNo, tl.LavelName, td.DepartNamefull
+            ORDER BY CM.ClassNo
+        `, { termYear });
+
+        res.json({
+            term,
+            year,
+            totalClasses: qRooms.recordset.length,
+            classes: qRooms.recordset
+        });
+    } catch (err) {
+        console.error('Editor-download classes error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Export Monthly Attendance Excel
+app.get('/api/editor-download/export', async (req, res) => {
+    try {
+        const pool = await getPool();
+        const term = req.query.term || '2';
+        const year = req.query.year || '2569';
+        const classNo = req.query.classNo || 'all';
+
+        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+
+        await wb.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error('Editor-download export error:', err);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel: ' + err.message });
+    }
+});
+
+// 3. Direct /editor-download endpoint handling
+app.get('/editor-download', async (req, res, next) => {
+    if (req.query.download === '1' || req.query.export === '1') {
+        try {
+            const pool = await getPool();
+            const term = req.query.term || '2';
+            const year = req.query.year || '2569';
+            const classNo = req.query.classNo || 'all';
+            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo);
+
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+            await wb.xlsx.write(res);
+            return res.end();
+        } catch (err) {
+            console.error('Direct editor-download error:', err);
+            return res.status(500).send('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel: ' + err.message);
+        }
+    }
+    next();
 });
 
 // Fallback to index.html (React client/dist if built, otherwise public)

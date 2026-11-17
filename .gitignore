@@ -30,6 +30,8 @@ Thumbs.db
 # Temp test & build outputs
 temp/
 tmp/
+scratch/
+*.xlsx
 *.pdf
 test_*.png
 screenshot_*.png
