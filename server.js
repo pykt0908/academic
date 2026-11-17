@@ -1380,7 +1380,11 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
         if (selectedMonth && selectedMonth !== 'all') {
             targetMonths = [parseInt(selectedMonth)];
         } else {
-            const recordedMonths = Array.from(new Set(attRes.recordset.map(r => r.MonthNum))).filter(Boolean).sort((a, b) => a - b);
+            const termOrder = (String(term) === '1')
+                ? [5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4]
+                : [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const recordedMonths = Array.from(new Set(attRes.recordset.map(r => r.MonthNum))).filter(Boolean);
+            recordedMonths.sort((a, b) => termOrder.indexOf(a) - termOrder.indexOf(b));
             const fallbackMonths = (String(term) === '1') ? [5, 6, 7, 8, 9, 10] : [11, 12, 1, 2, 3];
             targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
         }
@@ -1447,7 +1451,11 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
         if (selectedMonth && selectedMonth !== 'all') {
             targetMonths = [parseInt(selectedMonth)];
         } else {
-            const recordedMonths = Array.from(new Set(attRes.recordset.map(r => r.MonthNum))).filter(Boolean).sort((a, b) => a - b);
+            const termOrder = (String(term) === '1')
+                ? [5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4]
+                : [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const recordedMonths = Array.from(new Set(attRes.recordset.map(r => r.MonthNum))).filter(Boolean);
+            recordedMonths.sort((a, b) => termOrder.indexOf(a) - termOrder.indexOf(b));
             const fallbackMonths = (String(term) === '1') ? [5, 6, 7, 8, 9, 10] : [11, 12, 1, 2, 3];
             targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
         }

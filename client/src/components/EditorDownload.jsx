@@ -13,6 +13,10 @@ import {
 
 const THAI_MONTH_OPTIONS = [
   { value: 'all', label: 'ทุกเดือน (ตลอดภาคเรียน)' },
+  { value: '1', label: 'มกราคม' },
+  { value: '2', label: 'กุมภาพันธ์' },
+  { value: '3', label: 'มีนาคม' },
+  { value: '4', label: 'เมษายน' },
   { value: '5', label: 'พฤษภาคม' },
   { value: '6', label: 'มิถุนายน' },
   { value: '7', label: 'กรกฎาคม' },
@@ -20,11 +24,7 @@ const THAI_MONTH_OPTIONS = [
   { value: '9', label: 'กันยายน' },
   { value: '10', label: 'ตุลาคม' },
   { value: '11', label: 'พฤศจิกายน' },
-  { value: '12', label: 'ธันวาคม' },
-  { value: '1', label: 'มกราคม' },
-  { value: '2', label: 'กุมภาพันธ์' },
-  { value: '3', label: 'มีนาคม' },
-  { value: '4', label: 'เมษายน' }
+  { value: '12', label: 'ธันวาคม' }
 ]
 
 export default function EditorDownload({ onNavigateHome }) {
