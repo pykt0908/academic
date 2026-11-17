@@ -1536,8 +1536,9 @@ app.get('/api/editor-download/export', async (req, res) => {
 
         const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month);
 
+        const asciiFilename = `attendance_${term}_${year}.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+        res.setHeader('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
 
         await wb.xlsx.write(res);
         res.end();
@@ -1558,8 +1559,9 @@ app.get('/editor-download', async (req, res, next) => {
             const month = req.query.month;
             const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month);
 
+            const asciiFilename = `attendance_${term}_${year}.xlsx`;
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+            res.setHeader('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
             await wb.xlsx.write(res);
             return res.end();
         } catch (err) {
