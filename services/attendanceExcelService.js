@@ -197,8 +197,8 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
 
     ws.mergeCells('E6:E7');
     const hmCell = ws.getCell('E6');
-    hmCell.value = 'โฮมรูม';
-    hmCell.alignment = { textRotation: 90, horizontal: 'center', vertical: 'middle' };
+    hmCell.value = 'โ\nฮ\nม\nรู\nม';
+    hmCell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
 
     // Days Header (Row 6)
     const dateStartCol = 6;
@@ -247,7 +247,7 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
         c.font = { name: 'Sarabun', size: 9.5, bold: true };
         c.alignment = { horizontal: 'center', vertical: 'middle' };
     });
-    hmCell.alignment = { textRotation: 90, horizontal: 'center', vertical: 'middle' };
+    hmCell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
 
     dtHdr.fill = headerFill;
     dtHdr.font = { name: 'Sarabun', size: 10, bold: true };

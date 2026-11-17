@@ -11,16 +11,12 @@ import {
   Box,
   Typography,
   ThemeProvider,
-  createTheme,
-  Grid
+  createTheme
 } from '@mui/material'
 import {
   FileSpreadsheet,
   Download,
-  ArrowLeft,
-  Calendar,
-  Layers,
-  School
+  ArrowLeft
 } from 'lucide-react'
 
 const muiTheme = createTheme({
@@ -85,10 +81,19 @@ const THAI_MONTH_OPTIONS = [
   { value: '12', label: 'ธันวาคม' }
 ]
 
+const ROUND_OPTIONS = [
+  { value: 'all', label: 'ทุกรอบ (เช้า / บ่าย / ทวิภาคี)' },
+  { value: '1', label: 'รอบเช้า' },
+  { value: '6', label: 'รอบบ่าย' },
+  { value: '7', label: 'รอบทวิภาคี' },
+  { value: '2', label: 'รอบค่ำ' }
+]
+
 export default function EditorDownload({ onNavigateHome }) {
   const [term, setTerm] = useState('2')
   const [year, setYear] = useState('2569')
   const [selectedMonth, setSelectedMonth] = useState('all')
+  const [selectedRound, setSelectedRound] = useState('all') // 'all', '1', '6', '7', '2'
   const [selectedLevel, setSelectedLevel] = useState('all') // 'all', 'ปวช.', 'ปวส.'
   const [selectedClass, setSelectedClass] = useState('all') // 'all' or classNo
   const [termsList, setTermsList] = useState([])
@@ -136,15 +141,21 @@ export default function EditorDownload({ onNavigateHome }) {
       })
   }, [term, year])
 
-  // Filtered class list by level
+  // Filtered class list by level and round
   const filteredClassList = useMemo(() => {
-    if (selectedLevel === 'all') return classes
     return classes.filter(c => {
-      if (selectedLevel === 'ปวช.') return c.LavelName?.includes('ปวช')
-      if (selectedLevel === 'ปวส.') return c.LavelName?.includes('ปวส')
-      return true
+      // Level filter
+      const matchLevel = selectedLevel === 'all' ||
+        (selectedLevel === 'ปวช.' && (c.ClassNo?.startsWith('1') || c.LavelName?.includes('ปวช'))) ||
+        (selectedLevel === 'ปวส.' && (!c.ClassNo?.startsWith('1') || c.LavelName?.includes('ปวส')))
+
+      // Round filter
+      const cRound = c.ClassNo?.substring(3, 4)
+      const matchRound = selectedRound === 'all' || cRound === selectedRound
+
+      return matchLevel && matchRound
     })
-  }, [classes, selectedLevel])
+  }, [classes, selectedLevel, selectedRound])
 
   // Reset selectedClass to 'all' if selectedClass is not in the filtered list
   useEffect(() => {
@@ -169,7 +180,8 @@ export default function EditorDownload({ onNavigateHome }) {
 
     const monthParam = selectedMonth !== 'all' ? `&month=${selectedMonth}` : ''
     const levelParam = selectedLevel !== 'all' ? `&level=${encodeURIComponent(selectedLevel)}` : ''
-    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(selectedClass)}${monthParam}${levelParam}`
+    const roundParam = selectedRound !== 'all' ? `&round=${encodeURIComponent(selectedRound)}` : ''
+    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(selectedClass)}${monthParam}${levelParam}${roundParam}`
 
     const link = document.createElement('a')
     link.href = url
@@ -183,10 +195,12 @@ export default function EditorDownload({ onNavigateHome }) {
     setTimeout(() => {
       setDownloading(false)
       const mLabel = selectedMonth !== 'all' ? THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label : 'ตลอดภาคเรียน'
+      const rLabel = selectedRound !== 'all' ? ROUND_OPTIONS.find(r => r.value === selectedRound)?.label : ''
       const cLabel = selectedClass === 'all'
         ? `ทุกห้องเรียน (${filteredClassList.length} ห้อง)`
         : (classes.find(c => c.ClassNo === selectedClass)?.ClassName || selectedClass)
-      setSuccessMsg(`ดาวน์โหลดไฟล์ Excel ของ ${cLabel} (${mLabel}) เรียบร้อยแล้ว`)
+      const fullLabel = rLabel ? `${cLabel} (${rLabel})` : cLabel
+      setSuccessMsg(`ดาวน์โหลดไฟล์ Excel ของ ${fullLabel} [${mLabel}] เรียบร้อยแล้ว`)
       setTimeout(() => setSuccessMsg(''), 5000)
     }, 1500)
   }
@@ -195,6 +209,11 @@ export default function EditorDownload({ onNavigateHome }) {
   const activeMonthLabel = selectedMonth !== 'all'
     ? (THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label || selectedMonth)
     : 'ตลอดภาคเรียน'
+
+  // Label for active round
+  const activeRoundLabel = selectedRound !== 'all'
+    ? (ROUND_OPTIONS.find(r => r.value === selectedRound)?.label || selectedRound)
+    : 'ทุกรอบ'
 
   // Label for active target
   const activeTargetLabel = selectedClass === 'all'
@@ -303,7 +322,7 @@ export default function EditorDownload({ onNavigateHome }) {
                 </FormControl>
               </Box>
 
-              {/* Row 2: Month & Level */}
+              {/* Row 2: Month & Round (เช้า-บ่าย) */}
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                 <FormControl fullWidth size="medium">
                   <InputLabel id="month-label">ประจำเดือน</InputLabel>
@@ -321,22 +340,38 @@ export default function EditorDownload({ onNavigateHome }) {
                 </FormControl>
 
                 <FormControl fullWidth size="medium">
-                  <InputLabel id="level-label">ระดับชั้น</InputLabel>
+                  <InputLabel id="round-label">รอบเวลาเรียน (เช้า - บ่าย)</InputLabel>
                   <Select
-                    labelId="level-label"
-                    id="level-select"
-                    value={selectedLevel}
-                    label="ระดับชั้น"
-                    onChange={e => setSelectedLevel(e.target.value)}
+                    labelId="round-label"
+                    id="round-select"
+                    value={selectedRound}
+                    label="รอบเวลาเรียน (เช้า - บ่าย)"
+                    onChange={e => setSelectedRound(e.target.value)}
                   >
-                    <MenuItem value="all">ทั้งหมด (ปวช. และ ปวส.)</MenuItem>
-                    <MenuItem value="ปวช.">ระดับ ปวช.</MenuItem>
-                    <MenuItem value="ปวส.">ระดับ ปวส.</MenuItem>
+                    {ROUND_OPTIONS.map(r => (
+                      <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Box>
 
-              {/* Row 3: Classroom Selector */}
+              {/* Row 3: Level */}
+              <FormControl fullWidth size="medium">
+                <InputLabel id="level-label">ระดับชั้น</InputLabel>
+                <Select
+                  labelId="level-label"
+                  id="level-select"
+                  value={selectedLevel}
+                  label="ระดับชั้น"
+                  onChange={e => setSelectedLevel(e.target.value)}
+                >
+                  <MenuItem value="all">ทั้งหมด (ปวช. และ ปวส.)</MenuItem>
+                  <MenuItem value="ปวช.">ระดับ ปวช.</MenuItem>
+                  <MenuItem value="ปวส.">ระดับ ปวส.</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Row 4: Classroom Selector */}
               <FormControl fullWidth size="medium" disabled={loading}>
                 <InputLabel id="classroom-label">ห้องเรียนที่ต้องการดาวน์โหลด</InputLabel>
                 <Select
@@ -374,6 +409,8 @@ export default function EditorDownload({ onNavigateHome }) {
                 <Box sx={{ fontSize: '0.85rem', color: '#475569' }}>
                   <span style={{ fontWeight: 700, color: '#0f172a' }}>เงื่อนไข: </span>
                   <span>{activeTargetLabel}</span>
+                  <span style={{ margin: '0 6px', color: '#94a3b8' }}>•</span>
+                  <span>{activeRoundLabel}</span>
                   <span style={{ margin: '0 6px', color: '#94a3b8' }}>•</span>
                   <span>เดือน{activeMonthLabel}</span>
                   <span style={{ margin: '0 6px', color: '#94a3b8' }}>•</span>

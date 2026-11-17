@@ -1317,6 +1317,7 @@ function parseClassInfo(cInfo, cNo, term, year) {
         classNo: cNo,
         className,
         levelClass,
+        lavelName,
         departName,
         roundName,
         term,
@@ -1324,7 +1325,43 @@ function parseClassInfo(cInfo, cNo, term, year) {
     };
 }
 
-async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth, selectedLevel) {
+function formatSheetTitle(c, targetMonths, mNum) {
+    const classNo = c.classNo || c.ClassNo || '';
+    const lavelNo = classNo.substring(0, 1);
+    const roundNo = classNo.substring(3, 4);
+    const yearNo = classNo.substring(4, 5);
+    const roomNo = classNo.substring(5);
+    const lName = c.lavelName || c.LavelName || '';
+
+    let lavelPrefix = 'ปวช.';
+    let isSpecial = false;
+
+    if (lavelNo === '2') {
+        lavelPrefix = 'ปวส.';
+    } else if (lavelNo === '3' || lName.includes('พิเศษ')) {
+        lavelPrefix = 'ปวส.';
+        isSpecial = true;
+    } else if (lName.includes('ปวส')) {
+        lavelPrefix = 'ปวส.';
+    } else {
+        lavelPrefix = 'ปวช.';
+    }
+
+    let title = `${lavelPrefix}${yearNo}_${roomNo}`;
+    if (isSpecial) title += '_พิเศษ';
+    if (roundNo === '6') title += '_บ่าย';
+    else if (roundNo === '7') title += '_ทวิ';
+    else if (roundNo === '2') title += '_ค่ำ';
+
+    if (targetMonths && targetMonths.length > 1 && mNum) {
+        const mShort = (THAI_MONTHS_FULL[mNum] || '').substring(0, 3);
+        title += `_${mShort}`;
+    }
+
+    return title.substring(0, 30);
+}
+
+async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth, selectedLevel, selectedRound) {
     const termYear = `${term}/${year}`;
     const wb = new ExcelJS.Workbook();
     wb.creator = 'วิทยาลัยเทคโนโลยีศรีราชา';
@@ -1389,13 +1426,8 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
         }
 
-        const yearNo = classNo.substring(4, 5);
-        const roomNo = classNo.substring(5);
-        const baseTitle = `${yearNo}_${roomNo}`;
-
         targetMonths.forEach(mNum => {
-            const mLabel = THAI_MONTHS_FULL[mNum] || `เดือน ${mNum}`;
-            const sheetTitle = targetMonths.length === 1 ? baseTitle : `${baseTitle}_${mLabel}`;
+            const sheetTitle = formatSheetTitle(parsedInfo, targetMonths, mNum);
             buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle);
         });
 
@@ -1424,10 +1456,16 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             }
         }
 
+        // Filter by round if specified
+        if (selectedRound && selectedRound !== 'all') {
+            rooms = rooms.filter(r => r.ClassNo.substring(3, 4) === String(selectedRound));
+        }
+
         // Sort rooms in sequential classroom order:
         // 1. Level (ปวช. before ปวส.)
         // 2. Year (1, then 2, then 3)
         // 3. Room (1, 2, 3, 4, 5, 6...)
+        // 4. Round (1=เช้า, 6=บ่าย, 7=ทวิภาคี)
         rooms.sort((a, b) => {
             const aLavel = a.ClassNo[0];
             const bLavel = b.ClassNo[0];
@@ -1440,6 +1478,10 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             const aRoom = parseInt(a.ClassNo.substring(5)) || 0;
             const bRoom = parseInt(b.ClassNo.substring(5)) || 0;
             if (aRoom !== bRoom) return aRoom - bRoom;
+
+            const aRound = a.ClassNo.substring(3, 4);
+            const bRound = b.ClassNo.substring(3, 4);
+            if (aRound !== bRound) return aRound.localeCompare(bRound);
 
             return a.ClassNo.localeCompare(b.ClassNo);
         });
@@ -1495,8 +1537,6 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
             targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
         }
 
-        const hasMultipleLevels = new Set(rooms.map(r => r.ClassNo[0])).size > 1;
-
         rooms.forEach(c => {
             const parsedInfo = parseClassInfo(c, c.ClassNo, term, year);
             const classAtt = attByClass.get(c.ClassNo) || [];
@@ -1508,23 +1548,17 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
                 attRecords: classAtt
             };
 
-            const yearNo = c.ClassNo.substring(4, 5);
-            const roomNo = c.ClassNo.substring(5);
-            const baseTitle = hasMultipleLevels
-                ? `${parsedInfo.levelClass.replace(/[\/\\:*?"<>|]/g, '_')}` // e.g. ปวช.1_1
-                : `${yearNo}_${roomNo}`; // e.g. 1_1, 1_2
-
             targetMonths.forEach(mNum => {
-                const sheetTitle = targetMonths.length === 1 
-                    ? baseTitle
-                    : `${baseTitle}_${(THAI_MONTHS_FULL[mNum] || '').substring(0, 3)}`;
+                const sheetTitle = formatSheetTitle(parsedInfo, targetMonths, mNum);
                 buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle);
             });
         });
 
-        const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
+        const roundSuffixMap = { '1': '_รอบเช้า', '6': '_รอบบ่าย', '7': '_รอบทวิภาคี', '2': '_รอบค่ำ' };
+        const roundSuffix = selectedRound && selectedRound !== 'all' ? (roundSuffixMap[selectedRound] || `_รอบ${selectedRound}`) : '';
         const levelSuffix = (selectedLevel && selectedLevel !== 'all') ? `_${selectedLevel.replace(/[\/\\:*?"<>|.]/g, '')}` : '';
-        const filename = `สถิติขาดเรียน_ทุกห้อง${levelSuffix}${monthSuffix}_${term}_${year}.xlsx`;
+        const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
+        const filename = `สถิติขาดเรียน_ทุกห้อง${levelSuffix}${roundSuffix}${monthSuffix}_${term}_${year}.xlsx`;
         return { wb, filename };
     }
 }
@@ -1585,8 +1619,9 @@ app.get('/api/editor-download/export', async (req, res) => {
         const classNo = req.query.classNo || 'all';
         const month = req.query.month;
         const level = req.query.level;
+        const round = req.query.round;
 
-        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level);
+        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level, round);
 
         const asciiFilename = `attendance_${term}_${year}.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1610,7 +1645,8 @@ app.get('/editor-download', async (req, res, next) => {
             const classNo = req.query.classNo || 'all';
             const month = req.query.month;
             const level = req.query.level;
-            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level);
+            const round = req.query.round;
+            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month, level, round);
 
             const asciiFilename = `attendance_${term}_${year}.xlsx`;
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
