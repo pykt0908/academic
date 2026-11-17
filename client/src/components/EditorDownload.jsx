@@ -18,6 +18,7 @@ import {
 export default function EditorDownload({ onNavigateHome }) {
   const [term, setTerm] = useState('2')
   const [year, setYear] = useState('2569')
+  const [selectedMonth, setSelectedMonth] = useState('all')
   const [termsList, setTermsList] = useState([])
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -97,23 +98,42 @@ export default function EditorDownload({ onNavigateHome }) {
     return classes.reduce((sum, c) => sum + (c.PeriodsChecked || 0), 0)
   }, [classes])
 
+  const THAI_MONTH_OPTIONS = [
+    { value: 'all', label: 'ทุกเดือน (ตลอดภาคเรียน)' },
+    { value: '5', label: 'พฤษภาคม (5)' },
+    { value: '6', label: 'มิถุนายน (6)' },
+    { value: '7', label: 'กรกฎาคม (7)' },
+    { value: '8', label: 'สิงหาคม (8)' },
+    { value: '9', label: 'กันยายน (9)' },
+    { value: '10', label: 'ตุลาคม (10)' },
+    { value: '11', label: 'พฤศจิกายน (11)' },
+    { value: '12', label: 'ธันวาคม (12)' },
+    { value: '1', label: 'มกราคม (1)' },
+    { value: '2', label: 'กุมภาพันธ์ (2)' },
+    { value: '3', label: 'มีนาคม (3)' },
+    { value: '4', label: 'เมษายน (4)' }
+  ]
+
   // Download Single Classroom Excel
   const handleDownloadClass = (classNo, className) => {
     setDownloadingClass(classNo)
     setSuccessMsg('')
-    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(classNo)}`
+    const monthParam = selectedMonth !== 'all' ? `&month=${selectedMonth}` : ''
+    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=${encodeURIComponent(classNo)}${monthParam}`
     
     // Create invisible anchor to download
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', `attendance_${classNo}_${term}_${year}.xlsx`)
+    const monthSuffix = selectedMonth !== 'all' ? `_เดือน${selectedMonth}` : ''
+    link.setAttribute('download', `สถิติขาดเรียน_${classNo}_${term}_${year}${monthSuffix}.xlsx`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
 
     setTimeout(() => {
       setDownloadingClass(null)
-      setSuccessMsg(`ดาวน์โหลดไฟล์ของ ${className} เรียบร้อยแล้ว`)
+      const mText = selectedMonth !== 'all' ? ` (เดือน ${THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label || selectedMonth})` : ''
+      setSuccessMsg(`ดาวน์โหลดไฟล์ของ ${className}${mText} เรียบร้อยแล้ว`)
       setTimeout(() => setSuccessMsg(''), 4000)
     }, 1200)
   }
@@ -122,18 +142,21 @@ export default function EditorDownload({ onNavigateHome }) {
   const handleDownloadAll = () => {
     setDownloadingAll(true)
     setSuccessMsg('')
-    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=all`
+    const monthParam = selectedMonth !== 'all' ? `&month=${selectedMonth}` : ''
+    const url = `/api/editor-download/export?term=${term}&year=${year}&classNo=all${monthParam}`
 
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', `attendance_monthly_all_classes_${term}_${year}.xlsx`)
+    const monthSuffix = selectedMonth !== 'all' ? `_เดือน${selectedMonth}` : ''
+    link.setAttribute('download', `สถิติขาดเรียน_ทุกห้อง_${term}_${year}${monthSuffix}.xlsx`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
 
     setTimeout(() => {
       setDownloadingAll(false)
-      setSuccessMsg(`ดาวน์โหลดไฟล์รวมทุกห้องเรียน (${classes.length} ห้อง) เรียบร้อยแล้ว`)
+      const mText = selectedMonth !== 'all' ? ` (เดือน ${THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label || selectedMonth})` : ''
+      setSuccessMsg(`ดาวน์โหลดไฟล์รวมทุกห้องเรียน (${classes.length} ห้อง)${mText} เรียบร้อยแล้ว`)
       setTimeout(() => setSuccessMsg(''), 5000)
     }, 2000)
   }
@@ -198,7 +221,7 @@ export default function EditorDownload({ onNavigateHome }) {
                 ส่งออกสถิติเวลาเรียน (มา/ขาด/ลา/ป่วย) เป็น Excel
               </h1>
               <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-                ดาวน์โหลดรายงานสถิติการมาเรียนและขาดเรียนรายเดือนของนักศึกษา แยกเป็นห้องแบบละเอียด พร้อมแถบสรุปรวมตลอดภาคเรียนและตารางบันทึกเวลาเรียนรายวัน
+                ดาวน์โหลดแบบฟอร์มสถิติการขาดเรียนของนักศึกษา (งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา) แยกเป็นห้องแบบละเอียด พร้อมเลือกประจำเดือนได้ตามต้องการ
               </p>
             </div>
 
@@ -222,7 +245,7 @@ export default function EditorDownload({ onNavigateHome }) {
                 )}
               </button>
               <span className="text-xs text-slate-400">
-                * สร้างไฟล์ Excel เดียว รวมแท็บชีตของทุกห้องเรียน ({classes.length} ห้อง) พร้อมชีตสรุปภาพรวม
+                * รวมแบบฟอร์มสถิติการขาดเรียนทุกห้องเรียน ({classes.length} ห้อง) {selectedMonth !== 'all' ? `ประจำเดือน ${THAI_MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label}` : 'ตลอดภาคเรียน'}
               </span>
             </div>
           </div>
@@ -288,6 +311,20 @@ export default function EditorDownload({ onNavigateHome }) {
               </select>
             </div>
 
+            {/* Month Selector */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-blue-900 uppercase">ประจำเดือน:</label>
+              <select
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                className="px-3 py-1.5 text-sm font-bold bg-blue-50 border border-blue-300 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                {THAI_MONTH_OPTIONS.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Level Filter Tabs */}
             <div className="flex items-center border border-slate-300 bg-slate-100 p-0.5 ml-0 sm:ml-2">
               <button
@@ -334,7 +371,7 @@ export default function EditorDownload({ onNavigateHome }) {
               </h2>
             </div>
             <span className="text-xs text-slate-500">
-              * แต่ละไฟล์ประกอบด้วย: ชีตสถิติรายเดือน + ชีตบันทึกเวลาเรียนรายวัน
+              * แบบฟอร์มสถิติการขาดเรียน (งานปกครองนักเรียนนักศึกษา ฝ่ายพัฒนากิจการนักศึกษา) ตามระเบียบวิทยาลัย
             </span>
           </div>
 

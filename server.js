@@ -3,7 +3,7 @@ const sql = require('mssql');
 const cors = require('cors');
 const path = require('path');
 const ExcelJS = require('exceljs');
-const { buildClassroomWorksheet, buildDailyWorksheet, buildMasterOverviewSheet } = require('./services/attendanceExcelService');
+const { buildStudentAffairsMonthlyWorksheet, getWeekdaysInMonth, THAI_MONTHS_FULL } = require('./services/attendanceExcelService');
 require('dotenv').config();
 
 const app = express();
@@ -1290,10 +1290,41 @@ app.get('/api/teacher/teaching-logs', requireTeacherAuth, async (req, res) => {
 });
 
 // ==========================================
-// EDITOR DOWNLOAD: Monthly Attendance Excel Export Services
+// EDITOR DOWNLOAD: Monthly Attendance Excel Export Services (Student Affairs Format)
 // ==========================================
 
-async function exportAttendanceExcelHelper(pool, term, year, classNo) {
+const ROUND_MAP = {
+    '1': 'เช้า',
+    '2': 'ค่ำ',
+    '6': 'บ่าย',
+    '7': 'ทวิภาคี'
+};
+
+function parseClassInfo(cInfo, cNo, term, year) {
+    const lavelNo = String(cNo).substring(0, 1);
+    const departNo = String(cNo).substring(1, 3);
+    const roundNo = String(cNo).substring(3, 4);
+    const yearNo = String(cNo).substring(4, 5);
+    const roomNo = String(cNo).substring(5);
+
+    const lavelName = cInfo.LavelName || (lavelNo === '1' ? 'ปวช.' : lavelNo === '2' ? 'ปวส.' : '');
+    const departName = cInfo.DepartNamefull || '';
+    const roundName = ROUND_MAP[roundNo] || 'เช้า';
+    const levelClass = `${lavelName}${yearNo}/${roomNo}`.trim() || cNo;
+    const className = `${levelClass} ${departName}`.trim() || cNo;
+
+    return {
+        classNo: cNo,
+        className,
+        levelClass,
+        departName,
+        roundName,
+        term,
+        year
+    };
+}
+
+async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMonth) {
     const termYear = `${term}/${year}`;
     const wb = new ExcelJS.Workbook();
     wb.creator = 'วิทยาลัยเทคโนโลยีศรีราชา';
@@ -1304,6 +1335,7 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo) {
         const qClass = await executeSafeQuery(pool, `
             SELECT TOP 1
               tl.LavelName, td.DepartNamefull,
+              SUBSTRING(@classNo, 4, 1) AS RoundNo,
               SUBSTRING(@classNo, 5, 1) AS [Year],
               SUBSTRING(@classNo, 6, 10) AS Room
             FROM Basedata.dbo.tblLavel tl, Basedata.dbo.tblDepart td
@@ -1311,11 +1343,12 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo) {
               AND td.DepartNo = SUBSTRING(@classNo, 2, 2)
         `, { classNo });
         const cInfo = qClass.recordset[0] || {};
-        const className = `${cInfo.LavelName || ''} ${cInfo.Year || ''}/${cInfo.Room || ''} ${cInfo.DepartNamefull || ''}`.trim() || classNo;
+        const parsedInfo = parseClassInfo(cInfo, classNo, term, year);
 
         const studentsRes = await executeSafeQuery(pool, `
             SELECT SR.No_Room, SR.StdNo,
-                   IsNull(V.PrefixNameFull,'') + V.Fname + ' ' + V.Lname AS StdName
+                   IsNull(V.PrefixNameFull,'') + V.Fname + ' ' + V.Lname AS StdName,
+                   V.PrefixNameFull
             FROM Tabain.dbo.tblStudentRoom SR
             JOIN Tabain.dbo.v_student V ON SR.StdNo = V.StdNo
             WHERE SR.LavelNo + SR.DepartNo + SR.RoundNo + SR.[Year] + SR.Room = @classNo
@@ -1337,110 +1370,40 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo) {
             ORDER BY CM.DateInput, CD.TimeNo
         `, { termYear, classNo });
 
-        const monthMap = new Map();
-        const studentMap = new Map();
-
-        studentsRes.recordset.forEach(s => {
-            const sId = String(s.StdNo).trim();
-            studentMap.set(sId, {
-                no: s.No_Room || '',
-                stdNo: sId,
-                name: s.StdName || '',
-                months: new Map(),
-                totalPresent: 0,
-                totalAbsent: 0,
-                totalLeave: 0,
-                totalSick: 0,
-                totalPeriods: 0
-            });
-        });
-
-        attRes.recordset.forEach(r => {
-            const sId = String(r.StdNo).trim();
-            if (!studentMap.has(sId)) {
-                studentMap.set(sId, {
-                    no: '',
-                    stdNo: sId,
-                    name: 'รหัสนักศึกษา ' + sId,
-                    months: new Map(),
-                    totalPresent: 0,
-                    totalAbsent: 0,
-                    totalLeave: 0,
-                    totalSick: 0,
-                    totalPeriods: 0
-                });
-            }
-
-            const yThai = r.YearNum > 2500 ? r.YearNum : r.YearNum + 543;
-            const mKey = `${yThai}-${String(r.MonthNum).padStart(2, '0')}`;
-            if (!monthMap.has(mKey)) {
-                monthMap.set(mKey, {
-                    mKey,
-                    monthNum: r.MonthNum,
-                    yearThai: yThai,
-                    label: `${THAI_MONTHS[r.MonthNum - 1] || ''} ${yThai}`
-                });
-            }
-
-            const sObj = studentMap.get(sId);
-            if (!sObj.months.has(mKey)) {
-                sObj.months.set(mKey, { present: 0, absent: 0, leave: 0, sick: 0, total: 0 });
-            }
-            const mStats = sObj.months.get(mKey);
-            mStats.total++;
-            sObj.totalPeriods++;
-
-            const st = r.Status;
-            if (st === 'ข') {
-                mStats.absent++;
-                sObj.totalAbsent++;
-            } else if (st === 'ล') {
-                mStats.leave++;
-                sObj.totalLeave++;
-            } else if (st === 'ป') {
-                mStats.sick++;
-                sObj.totalSick++;
-            } else {
-                mStats.present++;
-                sObj.totalPresent++;
-            }
-        });
-
-        const sortedMonths = Array.from(monthMap.values()).sort((a, b) => a.mKey.localeCompare(b.mKey));
-        const sortedStudents = Array.from(studentMap.values()).sort((a, b) => {
-            const na = parseInt(a.no) || 9999;
-            const nb = parseInt(b.no) || 9999;
-            if (na !== nb) return na - nb;
-            return a.stdNo.localeCompare(b.stdNo);
-        });
-
         const classData = {
-            info: { classNo, className, term, year },
-            students: sortedStudents,
-            months: sortedMonths,
+            info: parsedInfo,
+            students: studentsRes.recordset,
             attRecords: attRes.recordset
         };
 
-        buildClassroomWorksheet(wb, classData, 'สถิติรายเดือน');
-        buildDailyWorksheet(wb, classData);
+        let targetMonths = [];
+        if (selectedMonth && selectedMonth !== 'all') {
+            targetMonths = [parseInt(selectedMonth)];
+        } else {
+            const recordedMonths = Array.from(new Set(attRes.recordset.map(r => r.MonthNum))).filter(Boolean).sort((a, b) => a - b);
+            const fallbackMonths = (String(term) === '1') ? [5, 6, 7, 8, 9, 10] : [11, 12, 1, 2, 3];
+            targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
+        }
 
-        return { wb, filename: `attendance_monthly_${classNo}_${term}_${year}.xlsx` };
+        targetMonths.forEach(mNum => {
+            const mLabel = THAI_MONTHS_FULL[mNum] || `เดือน ${mNum}`;
+            buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, mLabel);
+        });
+
+        const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
+        const safeLevel = (parsedInfo.levelClass || classNo).replace(/[\/\\:*?"<>|]/g, '_');
+        const filename = `สถิติขาดเรียน_${safeLevel}${monthSuffix}_${term}_${year}.xlsx`;
+        return { wb, filename };
     } else {
         const qRooms = await executeSafeQuery(pool, `
             SELECT DISTINCT CM.ClassNo,
-                   tl.LavelName, td.DepartNamefull,
-                   COALESCE(
-                     NULLIF(LTRIM(RTRIM(IsNull(tl.LavelName, '') + ' ' + SUBSTRING(CM.ClassNo, 5, 1) + '/' + SUBSTRING(CM.ClassNo, 6, CASE WHEN LEN(CM.ClassNo) > 5 THEN LEN(CM.ClassNo) - 5 ELSE 1 END) + ' ' + IsNull(td.DepartNamefull, ''))), ''),
-                     CM.ClassNo
-                   ) AS ClassName
+                   tl.LavelName, td.DepartNamefull
             FROM Government.dbo.tblStdLearnInClassMain CM
             LEFT JOIN Basedata.dbo.tblLavel tl ON tl.LavelNo = SUBSTRING(CM.ClassNo, 1, 1)
             LEFT JOIN Basedata.dbo.tblDepart td ON td.DepartNo = SUBSTRING(CM.ClassNo, 2, 2)
             WHERE CM.TermYear = @termYear
             ORDER BY CM.ClassNo
         `, { termYear });
-
-        const classrooms = qRooms.recordset;
 
         const attRes = await executeSafeQuery(pool, `
             SELECT 
@@ -1454,6 +1417,7 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo) {
             FROM Government.dbo.tblStdLearnInClassMain CM
             JOIN Government.dbo.tblStdLearnInClassDetail CD ON CM.SLICNo = CD.SLICNo
             WHERE CM.TermYear = @termYear AND CD.TimeNo > 0
+            ORDER BY CM.DateInput, CD.TimeNo
         `, { termYear });
 
         const attByClass = new Map();
@@ -1466,7 +1430,8 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo) {
             SELECT 
               (SR.LavelNo + SR.DepartNo + SR.RoundNo + SR.[Year] + SR.Room) AS ClassNo,
               SR.No_Room, SR.StdNo,
-              IsNull(V.PrefixNameFull,'') + V.Fname + ' ' + V.Lname AS StdName
+              IsNull(V.PrefixNameFull,'') + V.Fname + ' ' + V.Lname AS StdName,
+              V.PrefixNameFull
             FROM Tabain.dbo.tblStudentRoom SR
             JOIN Tabain.dbo.v_student V ON SR.StdNo = V.StdNo
             ORDER BY (CASE WHEN SR.No_Room LIKE '%[^0-9]%' OR LEN(SR.No_Room) > 4 THEN 9999 ELSE CAST(SR.No_Room AS INT) END), SR.StdNo
@@ -1478,126 +1443,38 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo) {
             stdByClass.get(s.ClassNo).push(s);
         });
 
-        const allClassStats = [];
+        let targetMonths = [];
+        if (selectedMonth && selectedMonth !== 'all') {
+            targetMonths = [parseInt(selectedMonth)];
+        } else {
+            const recordedMonths = Array.from(new Set(attRes.recordset.map(r => r.MonthNum))).filter(Boolean).sort((a, b) => a - b);
+            const fallbackMonths = (String(term) === '1') ? [5, 6, 7, 8, 9, 10] : [11, 12, 1, 2, 3];
+            targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
+        }
 
-        classrooms.forEach((c) => {
+        qRooms.recordset.forEach(c => {
+            const parsedInfo = parseClassInfo(c, c.ClassNo, term, year);
             const classAtt = attByClass.get(c.ClassNo) || [];
             const classStds = stdByClass.get(c.ClassNo) || [];
 
-            const monthMap = new Map();
-            const studentMap = new Map();
-
-            classStds.forEach(s => {
-                const sId = String(s.StdNo).trim();
-                studentMap.set(sId, {
-                    no: s.No_Room || '',
-                    stdNo: sId,
-                    name: s.StdName || '',
-                    months: new Map(),
-                    totalPresent: 0,
-                    totalAbsent: 0,
-                    totalLeave: 0,
-                    totalSick: 0,
-                    totalPeriods: 0
-                });
-            });
-
-            let roomPresent = 0, roomAbsent = 0, roomLeave = 0, roomSick = 0, roomPeriods = 0;
-
-            classAtt.forEach(r => {
-                const sId = String(r.StdNo).trim();
-                if (!studentMap.has(sId)) {
-                    studentMap.set(sId, {
-                        no: '',
-                        stdNo: sId,
-                        name: 'รหัสนักศึกษา ' + sId,
-                        months: new Map(),
-                        totalPresent: 0,
-                        totalAbsent: 0,
-                        totalLeave: 0,
-                        totalSick: 0,
-                        totalPeriods: 0
-                    });
-                }
-
-                const yThai = r.YearNum > 2500 ? r.YearNum : r.YearNum + 543;
-                const mKey = `${yThai}-${String(r.MonthNum).padStart(2, '0')}`;
-                if (!monthMap.has(mKey)) {
-                    monthMap.set(mKey, {
-                        mKey,
-                        monthNum: r.MonthNum,
-                        yearThai: yThai,
-                        label: `${THAI_MONTHS[r.MonthNum - 1] || ''} ${yThai}`
-                    });
-                }
-
-                const sObj = studentMap.get(sId);
-                if (!sObj.months.has(mKey)) {
-                    sObj.months.set(mKey, { present: 0, absent: 0, leave: 0, sick: 0, total: 0 });
-                }
-                const mStats = sObj.months.get(mKey);
-                mStats.total++;
-                sObj.totalPeriods++;
-                roomPeriods++;
-
-                const st = r.Status;
-                if (st === 'ข') {
-                    mStats.absent++;
-                    sObj.totalAbsent++;
-                    roomAbsent++;
-                } else if (st === 'ล') {
-                    mStats.leave++;
-                    sObj.totalLeave++;
-                    roomLeave++;
-                } else if (st === 'ป') {
-                    mStats.sick++;
-                    sObj.totalSick++;
-                    roomSick++;
-                } else {
-                    mStats.present++;
-                    sObj.totalPresent++;
-                    roomPresent++;
-                }
-            });
-
-            const sortedMonths = Array.from(monthMap.values()).sort((a, b) => a.mKey.localeCompare(b.mKey));
-            const sortedStudents = Array.from(studentMap.values()).sort((a, b) => {
-                const na = parseInt(a.no) || 9999;
-                const nb = parseInt(b.no) || 9999;
-                if (na !== nb) return na - nb;
-                return a.stdNo.localeCompare(b.stdNo);
-            });
-
-            allClassStats.push({
-                classNo: c.ClassNo,
-                className: c.ClassName,
-                lavelName: c.LavelName,
-                departName: c.DepartNamefull,
-                studentCount: sortedStudents.length,
-                totalPeriods: roomPeriods,
-                totalPresent: roomPresent,
-                totalAbsent: roomAbsent,
-                totalLeave: roomLeave,
-                totalSick: roomSick
-            });
-
-            const shortName = `${c.ClassName || c.ClassNo}`.substring(0, 30);
-            buildClassroomWorksheet(wb, {
-                info: { ...c, term, year },
-                students: sortedStudents,
-                months: sortedMonths,
+            const classData = {
+                info: parsedInfo,
+                students: classStds,
                 attRecords: classAtt
-            }, shortName);
+            };
+
+            targetMonths.forEach(mNum => {
+                const safeLevel = (parsedInfo.levelClass || c.ClassNo).replace(/[\/\\:*?"<>|]/g, '_');
+                const sheetTitle = targetMonths.length === 1 
+                    ? safeLevel
+                    : `${safeLevel}_${(THAI_MONTHS_FULL[mNum] || '').substring(0, 3)}`;
+                buildStudentAffairsMonthlyWorksheet(wb, classData, mNum, sheetTitle);
+            });
         });
 
-        buildMasterOverviewSheet(wb, allClassStats, term, year);
-        const overviewSheet = wb.getWorksheet('ภาพรวมทุกห้องเรียน');
-        if (overviewSheet) {
-            wb.worksheets.pop();
-            wb.worksheets.unshift(overviewSheet);
-        }
-
-        return { wb, filename: `attendance_monthly_all_classes_${term}_${year}.xlsx` };
+        const monthSuffix = (selectedMonth && selectedMonth !== 'all') ? `_เดือน${THAI_MONTHS_FULL[parseInt(selectedMonth)] || selectedMonth}` : '';
+        const filename = `สถิติขาดเรียน_ทุกห้อง${monthSuffix}_${term}_${year}.xlsx`;
+        return { wb, filename };
     }
 }
 
@@ -1628,11 +1505,19 @@ app.get('/api/editor-download/classes', async (req, res) => {
             ORDER BY CM.ClassNo
         `, { termYear });
 
+        const qMonths = await executeSafeQuery(pool, `
+            SELECT DISTINCT MONTH(DateInput) as MonthNum, YEAR(DateInput) as YearNum
+            FROM Government.dbo.tblStdLearnInClassMain
+            WHERE TermYear = @termYear
+            ORDER BY YearNum, MonthNum
+        `, { termYear });
+
         res.json({
             term,
             year,
             totalClasses: qRooms.recordset.length,
-            classes: qRooms.recordset
+            classes: qRooms.recordset,
+            availableMonths: qMonths.recordset
         });
     } catch (err) {
         console.error('Editor-download classes error:', err);
@@ -1647,8 +1532,9 @@ app.get('/api/editor-download/export', async (req, res) => {
         const term = req.query.term || '2';
         const year = req.query.year || '2569';
         const classNo = req.query.classNo || 'all';
+        const month = req.query.month;
 
-        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo);
+        const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month);
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
@@ -1669,7 +1555,8 @@ app.get('/editor-download', async (req, res, next) => {
             const term = req.query.term || '2';
             const year = req.query.year || '2569';
             const classNo = req.query.classNo || 'all';
-            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo);
+            const month = req.query.month;
+            const { wb, filename } = await exportAttendanceExcelHelper(pool, term, year, classNo, month);
 
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
