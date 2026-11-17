@@ -822,28 +822,6 @@ export default function App() {
                 {loginLoading ? <CircularProgress size={22} color="inherit" /> : 'เข้าสู่ระบบ'}
               </Button>
             </Box>
-
-            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e2e8f0' }}>
-              <Button
-                variant="text"
-                size="small"
-                fullWidth
-                onClick={() => {
-                  window.history.pushState({}, '', '/editor-download')
-                  setCurrentPath('/editor-download')
-                }}
-                startIcon={<FileDownloadIcon fontSize="small" />}
-                sx={{
-                  color: '#16a34a',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  py: 1,
-                  '&:hover': { bgcolor: '#f0fdf4', color: '#15803d' }
-                }}
-              >
-                ดาวน์โหลดสถิติเวลาเรียน (Excel)
-              </Button>
-            </Box>
           </Paper>
         </Box>
       </ThemeProvider>
