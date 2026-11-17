@@ -259,6 +259,11 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     // ==========================================
     // 4. ROWS 8..N: STUDENT DATA ROWS
     // ==========================================
+    const startLetter = ws.getColumn(dateStartCol).letter;
+    const endLetter = ws.getColumn(dateEndCol).letter;
+    const absLetter = ws.getColumn(absStartCol).letter;
+    const leaveLetter = ws.getColumn(absStartCol + 1).letter;
+
     let curRow = 8;
     students.forEach((std, sIdx) => {
         const r = ws.getRow(curRow);
@@ -307,10 +312,20 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
             cell.alignment = { horizontal: 'center', vertical: 'middle' };
         });
 
-        // Summary columns: ขาด, ลา, รวม
-        r.getCell(absStartCol).value = absentCount;
-        r.getCell(absStartCol + 1).value = leaveCount;
-        r.getCell(absStartCol + 2).value = absentCount + leaveCount;
+        // Summary columns: ขาด, ลา, รวม (ใช้สูตร Excel เพื่อให้อัปเดตอัตโนมัติเมื่อมีการแก้ไขข้อมูล)
+        const dateRange = `${startLetter}${curRow}:${endLetter}${curRow}`;
+        r.getCell(absStartCol).value = {
+            formula: `COUNTIF(${dateRange},"ข")`,
+            result: absentCount
+        };
+        r.getCell(absStartCol + 1).value = {
+            formula: `COUNTIF(${dateRange},"ล")+COUNTIF(${dateRange},"ป")`,
+            result: leaveCount
+        };
+        r.getCell(absStartCol + 2).value = {
+            formula: `SUM(${absLetter}${curRow}:${leaveLetter}${curRow})`,
+            result: absentCount + leaveCount
+        };
 
         for (let i = 0; i < 3; i++) {
             const c = r.getCell(absStartCol + i);
