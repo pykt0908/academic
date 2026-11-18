@@ -450,8 +450,139 @@ function buildStudentAffairsMonthlyWorksheet(wb, classData, targetMonthNum, shee
     return ws;
 }
 
+/**
+ * Generates structured JSON preview data for web viewing (matching the Excel sheet layout)
+ */
+function getStudentAffairsMonthlyPreview(classData, targetMonthNum, reportType = 'absence') {
+    const { info, students, attRecords, notInRowSet, rowCheckedDates } = classData;
+    const isTardyReport = reportType === 'tardy';
+    const yearCE = info.year > 2500 ? (parseInt(info.year) - 543) : parseInt(info.year);
+    const yearThai = info.year > 2500 ? info.year : (parseInt(info.year) + 543);
+    const monthName = THAI_MONTHS_FULL[targetMonthNum] || '';
+    const mYearCE = (String(info.term) === '2' && targetMonthNum <= 4) ? (yearCE + 1) : yearCE;
+
+    const weekdays = getWeekdaysInMonth(mYearCE, targetMonthNum);
+
+    const studentDayPeriods = new Map();
+    const checkedDates = new Set();
+
+    (attRecords || []).forEach(r => {
+        checkedDates.add(r.DateStr);
+        const sId = String(r.StdNo).trim();
+        const key = `${sId}|${r.DateStr}`;
+        if (!studentDayPeriods.has(key)) {
+            studentDayPeriods.set(key, []);
+        }
+        studentDayPeriods.get(key).push(r.Status);
+    });
+
+    function getStudentDayStatus(sId, dateStr) {
+        const key = `${sId}|${dateStr}`;
+        const periods = studentDayPeriods.get(key) || [];
+        const isAbsentFromRow = notInRowSet && notInRowSet.has(key);
+        const dayHasData = checkedDates.has(dateStr) || (rowCheckedDates && rowCheckedDates.has(dateStr));
+
+        if (!dayHasData && periods.length === 0) {
+            return '';
+        }
+
+        const hasPresent = periods.some(st => st === 'ม' || st === '/');
+        const hasSick = periods.some(st => st === 'ป');
+        const hasLeave = periods.some(st => st === 'ล');
+        const allAbsent = periods.length > 0 && periods.every(st => st === 'ข');
+
+        if (isTardyReport) {
+            if (isAbsentFromRow) {
+                if (hasPresent) return 'ส';
+                if (hasSick) return 'ป';
+                if (hasLeave) return 'ล';
+                return 'ข';
+            }
+            if (hasSick) return 'ป';
+            if (hasLeave) return 'ล';
+            if (allAbsent) return 'ข';
+            if (hasPresent || (rowCheckedDates && rowCheckedDates.has(dateStr))) return '/';
+            return checkedDates.has(dateStr) ? '/' : '';
+        } else {
+            if (periods.length === 0) return checkedDates.has(dateStr) ? '/' : '';
+            if (hasPresent) return '/';
+            if (periods.some(st => st === 'ข')) return 'ข';
+            if (hasSick) return 'ป';
+            if (hasLeave) return 'ล';
+            return '/';
+        }
+    }
+
+    let maleCount = 0;
+    let femaleCount = 0;
+    let totalTardy = 0;
+    let totalAbsent = 0;
+    let totalLeave = 0;
+
+    const studentRows = (students || []).map((std, sIdx) => {
+        const sId = String(std.StdNo).trim();
+        const prefix = std.PrefixNameFull || '';
+        const isMale = std.gender ? std.gender === 'ชาย' : (prefix.includes('นาย') || prefix.includes('เด็กชาย'));
+        const gender = isMale ? 'ชาย' : 'หญิง';
+        if (isMale) maleCount++; else femaleCount++;
+
+        let tardyCount = 0;
+        let absentCount = 0;
+        let leaveCount = 0;
+
+        const days = {};
+        weekdays.forEach(w => {
+            const st = getStudentDayStatus(sId, w.dateStr);
+            days[w.dayNum] = st;
+            if (st === 'ส') tardyCount++;
+            else if (st === 'ข') absentCount++;
+            else if (st === 'ล' || st === 'ป') leaveCount++;
+        });
+
+        totalTardy += tardyCount;
+        totalAbsent += absentCount;
+        totalLeave += leaveCount;
+
+        return {
+            no: std.no || std.No_Room || (sIdx + 1),
+            stdNo: sId,
+            name: std.name || std.StdName,
+            gender,
+            days,
+            summary: {
+                tardy: tardyCount,
+                absent: absentCount,
+                leave: leaveCount,
+                total: isTardyReport ? (tardyCount + absentCount + leaveCount) : (absentCount + leaveCount)
+            }
+        };
+    });
+
+    return {
+        info: {
+            ...info,
+            yearThai,
+            monthName,
+            monthNum: targetMonthNum
+        },
+        reportType,
+        weekdays,
+        students: studentRows,
+        totals: {
+            maleCount,
+            femaleCount,
+            totalStudents: studentRows.length,
+            totalTardy,
+            totalAbsent,
+            totalLeave,
+            grandTotal: isTardyReport ? (totalTardy + totalAbsent + totalLeave) : (totalAbsent + totalLeave)
+        }
+    };
+}
+
 module.exports = {
     buildStudentAffairsMonthlyWorksheet,
+    getStudentAffairsMonthlyPreview,
     getWeekdaysInMonth,
     THAI_MONTHS_FULL
 };

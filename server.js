@@ -3,7 +3,7 @@ const sql = require('mssql');
 const cors = require('cors');
 const path = require('path');
 const ExcelJS = require('exceljs');
-const { buildStudentAffairsMonthlyWorksheet, getWeekdaysInMonth, THAI_MONTHS_FULL } = require('./services/attendanceExcelService');
+const { buildStudentAffairsMonthlyWorksheet, getStudentAffairsMonthlyPreview, getWeekdaysInMonth, THAI_MONTHS_FULL } = require('./services/attendanceExcelService');
 require('dotenv').config();
 
 const app = express();
@@ -1634,6 +1634,181 @@ async function exportAttendanceExcelHelper(pool, term, year, classNo, selectedMo
     }
 }
 
+async function previewAttendanceHelper(pool, term, year, classNo, selectedMonth, selectedLevel, selectedRound, reportType = 'absence', activeClassNo = null) {
+    const termYear = `${term}/${year}`;
+    const yearCE = year > 2500 ? (parseInt(year) - 543) : parseInt(year);
+
+    // 1. Determine all matching rooms
+    const qRooms = await executeSafeQuery(pool, `
+        SELECT DISTINCT CM.ClassNo,
+               tl.LavelName, td.DepartNamefull,
+               COALESCE(
+                 NULLIF(LTRIM(RTRIM(IsNull(tl.LavelName, '') + ' ' + SUBSTRING(CM.ClassNo, 5, 1) + '/' + SUBSTRING(CM.ClassNo, 6, CASE WHEN LEN(CM.ClassNo) > 5 THEN LEN(CM.ClassNo) - 5 ELSE 1 END) + ' ' + IsNull(td.DepartNamefull, ''))), ''),
+                 CM.ClassNo
+               ) AS ClassName
+        FROM Government.dbo.tblStdLearnInClassMain CM
+        LEFT JOIN Basedata.dbo.tblLavel tl ON tl.LavelNo = SUBSTRING(CM.ClassNo, 1, 1)
+        LEFT JOIN Basedata.dbo.tblDepart td ON td.DepartNo = SUBSTRING(CM.ClassNo, 2, 2)
+        WHERE CM.TermYear = @termYear
+        ORDER BY CM.ClassNo
+    `, { termYear });
+
+    let rooms = qRooms.recordset;
+
+    if (selectedLevel && selectedLevel !== 'all') {
+        if (selectedLevel === 'ปวช.' || selectedLevel.includes('ปวช')) {
+            rooms = rooms.filter(r => r.ClassNo.startsWith('1') || r.LavelName?.includes('ปวช'));
+        } else if (selectedLevel === 'ปวส.' || selectedLevel.includes('ปวส')) {
+            rooms = rooms.filter(r => !r.ClassNo.startsWith('1') || r.LavelName?.includes('ปวส'));
+        }
+    }
+
+    if (selectedRound && selectedRound !== 'all') {
+        if (String(selectedRound) === '1') {
+            rooms = rooms.filter(r => {
+                const rnd = r.ClassNo.substring(3, 4);
+                return rnd === '1' || rnd === '7';
+            });
+        } else {
+            rooms = rooms.filter(r => r.ClassNo.substring(3, 4) === String(selectedRound));
+        }
+    }
+
+    // Sequential classroom order
+    rooms.sort((a, b) => {
+        const aLavel = a.ClassNo[0];
+        const bLavel = b.ClassNo[0];
+        if (aLavel !== bLavel) return aLavel.localeCompare(bLavel);
+        const aYear = parseInt(a.ClassNo.substring(4, 5)) || 0;
+        const bYear = parseInt(b.ClassNo.substring(4, 5)) || 0;
+        if (aYear !== bYear) return aYear - bYear;
+        const aRoom = parseInt(a.ClassNo.substring(5)) || 0;
+        const bRoom = parseInt(b.ClassNo.substring(5)) || 0;
+        if (aRoom !== bRoom) return aRoom - bRoom;
+        return a.ClassNo.localeCompare(b.ClassNo);
+    });
+
+    const targetClassNo = (classNo && classNo !== 'all')
+        ? classNo
+        : (activeClassNo || rooms[0]?.ClassNo);
+
+    if (!targetClassNo) {
+        return { availableRooms: [], activeClassNo: null, sheets: [] };
+    }
+
+    // Date range for queries
+    let startDateStr, endDateStr;
+    if (selectedMonth && selectedMonth !== 'all') {
+        const mNum = parseInt(selectedMonth);
+        const mYearCE = (String(term) === '2' && mNum <= 4) ? (yearCE + 1) : yearCE;
+        const lastDay = new Date(mYearCE, mNum, 0).getDate();
+        startDateStr = `${mYearCE}-${String(mNum).padStart(2, '0')}-01`;
+        endDateStr = `${mYearCE}-${String(mNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    } else {
+        if (String(term) === '1') {
+            startDateStr = `${yearCE}-05-01`;
+            endDateStr = `${yearCE}-10-31`;
+        } else {
+            startDateStr = `${yearCE}-10-01`;
+            endDateStr = `${yearCE + 1}-04-30`;
+        }
+    }
+
+    let notInRowSet = new Set();
+    const rowCheckedDatesByClass = new Map();
+
+    if (reportType === 'tardy') {
+        const notInRowRes = await executeSafeQuery(pool, `
+            SELECT DISTINCT SN.StdNo, CONVERT(VARCHAR(10), SN.DateInput, 120) as DateStr
+            FROM Government.dbo.tblInputStudentNotInRow SN
+            WHERE SN.DateInput >= @startDateStr AND SN.DateInput <= @endDateStr
+        `, { startDateStr, endDateStr });
+        notInRowSet = new Set(notInRowRes.recordset.map(r => `${String(r.StdNo).trim()}|${r.DateStr}`));
+
+        const rowTeacherRes = await executeSafeQuery(pool, `
+            SELECT DISTINCT ClassNo, CONVERT(VARCHAR(10), DateInput, 120) as DateStr
+            FROM Government.dbo.tblInputStudentInRowByTeacher
+            WHERE ClassNo = @classNo AND DateInput >= @startDateStr AND DateInput <= @endDateStr
+        `, { classNo: targetClassNo, startDateStr, endDateStr });
+        rowTeacherRes.recordset.forEach(r => {
+            if (!rowCheckedDatesByClass.has(r.ClassNo)) {
+                rowCheckedDatesByClass.set(r.ClassNo, new Set());
+            }
+            rowCheckedDatesByClass.get(r.ClassNo).add(r.DateStr);
+        });
+    }
+
+    const qClass = await executeSafeQuery(pool, `
+        SELECT TOP 1
+          tl.LavelName, td.DepartNamefull,
+          SUBSTRING(@classNo, 4, 1) AS RoundNo,
+          SUBSTRING(@classNo, 5, 1) AS [Year],
+          SUBSTRING(@classNo, 6, 10) AS Room
+        FROM Basedata.dbo.tblLavel tl, Basedata.dbo.tblDepart td
+        WHERE tl.LavelNo = SUBSTRING(@classNo, 1, 1)
+          AND td.DepartNo = SUBSTRING(@classNo, 2, 2)
+    `, { classNo: targetClassNo });
+    const cInfo = qClass.recordset[0] || {};
+    const parsedInfo = parseClassInfo(cInfo, targetClassNo, term, year);
+
+    const studentsRes = await executeSafeQuery(pool, `
+        SELECT SR.No_Room, SR.StdNo,
+               IsNull(V.PrefixNameFull,'') + V.Fname + ' ' + V.Lname AS StdName,
+               V.PrefixNameFull
+        FROM Tabain.dbo.tblStudentRoom SR
+        JOIN Tabain.dbo.v_student V ON SR.StdNo = V.StdNo
+        WHERE SR.LavelNo + SR.DepartNo + SR.RoundNo + SR.[Year] + SR.Room = @classNo
+        ORDER BY (CASE WHEN SR.No_Room LIKE '%[^0-9]%' OR LEN(SR.No_Room) > 4 THEN 9999 ELSE CAST(SR.No_Room AS INT) END), SR.StdNo
+    `, { classNo: targetClassNo });
+
+    const attRes = await executeSafeQuery(pool, `
+        SELECT 
+          CM.SLICNo,
+          CONVERT(VARCHAR(10), CM.DateInput, 120) as DateStr,
+          MONTH(CM.DateInput) as MonthNum,
+          YEAR(CM.DateInput) as YearNum,
+          CD.TimeNo,
+          CD.StdNo,
+          LTRIM(RTRIM(CD.DintComeStdTypeInClass)) as Status
+        FROM Government.dbo.tblStdLearnInClassMain CM
+        JOIN Government.dbo.tblStdLearnInClassDetail CD ON CM.SLICNo = CD.SLICNo
+        WHERE CM.TermYear = @termYear AND CM.ClassNo = @classNo AND CD.TimeNo > 0
+        ORDER BY CM.DateInput, CD.TimeNo
+    `, { termYear, classNo: targetClassNo });
+
+    const classData = {
+        info: parsedInfo,
+        students: studentsRes.recordset,
+        attRecords: attRes.recordset,
+        notInRowSet,
+        rowCheckedDates: rowCheckedDatesByClass.get(targetClassNo) || new Set()
+    };
+
+    let targetMonths = [];
+    if (selectedMonth && selectedMonth !== 'all') {
+        targetMonths = [parseInt(selectedMonth)];
+    } else {
+        const termOrder = (String(term) === '1')
+            ? [5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4]
+            : [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        const recordedMonths = Array.from(new Set(attRes.recordset.map(r => r.MonthNum))).filter(Boolean);
+        recordedMonths.sort((a, b) => termOrder.indexOf(a) - termOrder.indexOf(b));
+        const fallbackMonths = (String(term) === '1') ? [5, 6, 7, 8, 9, 10] : [11, 12, 1, 2, 3];
+        targetMonths = recordedMonths.length > 0 ? recordedMonths : fallbackMonths;
+    }
+
+    const sheets = targetMonths.map(mNum => {
+        return getStudentAffairsMonthlyPreview(classData, mNum, reportType);
+    });
+
+    return {
+        availableRooms: rooms,
+        activeClassNo: targetClassNo,
+        activeClassName: parsedInfo.className,
+        sheets
+    };
+}
+
 // 1. Get Classrooms list for Editor Download
 app.get('/api/editor-download/classes', async (req, res) => {
     try {
@@ -1678,6 +1853,27 @@ app.get('/api/editor-download/classes', async (req, res) => {
     } catch (err) {
         console.error('Editor-download classes error:', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Preview Monthly Attendance Sheet on Web (Exact Spreadsheet Layout)
+app.get('/api/editor-download/preview', async (req, res) => {
+    try {
+        const pool = await getPool();
+        const term = req.query.term || '2';
+        const year = req.query.year || '2569';
+        const classNo = req.query.classNo || 'all';
+        const month = req.query.month || 'all';
+        const level = req.query.level || 'all';
+        const round = req.query.round || 'all';
+        const reportType = req.query.reportType || 'absence';
+        const activeClassNo = req.query.activeClassNo || null;
+
+        const data = await previewAttendanceHelper(pool, term, year, classNo, month, level, round, reportType, activeClassNo);
+        res.json(data);
+    } catch (err) {
+        console.error('Editor-download preview error:', err);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูลตัวอย่าง: ' + err.message });
     }
 });
 
